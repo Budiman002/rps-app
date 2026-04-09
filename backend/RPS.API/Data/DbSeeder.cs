@@ -18,7 +18,7 @@ public static class DbSeeder
                 {
                     FullName = "Admin GM",
                     Email = "admin.gm@rps.local",
-                    Password = "password123",
+                    Password = BCrypt.Net.BCrypt.HashPassword("password123"),
                     Role = UserRole.GM,
                     ContractType = ContractType.Permanent,
                     YearsOfExperience = 12,
@@ -29,7 +29,7 @@ public static class DbSeeder
                 {
                     FullName = "Admin PM",
                     Email = "admin.pm@rps.local",
-                    Password = "password123",
+                    Password = BCrypt.Net.BCrypt.HashPassword("password123"),
                     Role = UserRole.PM,
                     ContractType = ContractType.Permanent,
                     YearsOfExperience = 8,
@@ -40,7 +40,7 @@ public static class DbSeeder
                 {
                     FullName = "Admin Marketing",
                     Email = "admin.marketing@rps.local",
-                    Password = "password123",
+                    Password = BCrypt.Net.BCrypt.HashPassword("password123"),
                     Role = UserRole.Marketing,
                     ContractType = ContractType.Contract,
                     ContractEndDate = now.AddMonths(12),
@@ -52,7 +52,7 @@ public static class DbSeeder
                 {
                     FullName = "Admin HR",
                     Email = "admin.hr@rps.local",
-                    Password = "password123",
+                    Password = BCrypt.Net.BCrypt.HashPassword("password123"),
                     Role = UserRole.HR,
                     ContractType = ContractType.Permanent,
                     YearsOfExperience = 7,

@@ -59,7 +59,7 @@ public enum RequestStatus
 
 public class User
 {
-    public int Id { get; set; }
+    public Guid Id { get; set; }
     public string FullName { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
     public string Password { get; set; } = string.Empty;
@@ -76,7 +76,7 @@ public class User
 
 public class Project
 {
-    public int Id { get; set; }
+    public Guid Id { get; set; }
     public string Name { get; set; } = string.Empty;
     public string ClientName { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
@@ -87,8 +87,8 @@ public class Project
     public DateTime? ActualStartDate { get; set; }
     public DateTime EstimatedEndDate { get; set; }
     public int DurationWeeks { get; set; }
-    public int CreatedBy { get; set; }
-    public int? AssignedPmId { get; set; }
+    public Guid CreatedBy { get; set; }
+    public Guid? AssignedPmId { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 
@@ -101,8 +101,8 @@ public class Project
 
 public class ProjectRoleComposition
 {
-    public int Id { get; set; }
-    public int ProjectId { get; set; }
+    public Guid Id { get; set; }
+    public Guid ProjectId { get; set; }
     public string RoleTitle { get; set; } = string.Empty;
     public SeniorityLevel SeniorityLevel { get; set; }
     public EmploymentStatus EmploymentStatus { get; set; }
@@ -116,11 +116,11 @@ public class ProjectRoleComposition
 
 public class ProjectMember
 {
-    public int Id { get; set; }
-    public int ProjectId { get; set; }
-    public int UserId { get; set; }
-    public int RoleCompositionId { get; set; }
-    public int AssignedBy { get; set; }
+    public Guid Id { get; set; }
+    public Guid ProjectId { get; set; }
+    public Guid UserId { get; set; }
+    public Guid RoleCompositionId { get; set; }
+    public Guid AssignedBy { get; set; }
     public DateTime AssignedAt { get; set; }
 
     public Project Project { get; set; } = null!;
@@ -131,9 +131,9 @@ public class ProjectMember
 
 public class ChangeRequest
 {
-    public int Id { get; set; }
-    public int ProjectId { get; set; }
-    public int RequestedBy { get; set; }
+    public Guid Id { get; set; }
+    public Guid ProjectId { get; set; }
+    public Guid RequestedBy { get; set; }
     public string ChangeTitle { get; set; } = string.Empty;
     public string ChangeDescription { get; set; } = string.Empty;
     public ChangeRequestType RequestType { get; set; }
@@ -150,9 +150,9 @@ public class ChangeRequest
 
 public class ContractExtendRequest
 {
-    public int Id { get; set; }
-    public int EmployeeId { get; set; }
-    public int RequestedBy { get; set; }
+    public Guid Id { get; set; }
+    public Guid EmployeeId { get; set; }
+    public Guid RequestedBy { get; set; }
     public string Reason { get; set; } = string.Empty;
     public DateTime RequestedEndDate { get; set; }
     public RequestStatus Status { get; set; }
@@ -165,12 +165,12 @@ public class ContractExtendRequest
 
 public class Notification
 {
-    public int Id { get; set; }
-    public int RecipientId { get; set; }
+    public Guid Id { get; set; }
+    public Guid RecipientId { get; set; }
     public string Type { get; set; } = string.Empty;
     public string Title { get; set; } = string.Empty;
     public string Message { get; set; } = string.Empty;
-    public int? ReferenceId { get; set; }
+    public Guid? ReferenceId { get; set; }
     public string? ReferenceType { get; set; }
     public bool IsRead { get; set; }
     public DateTime CreatedAt { get; set; }

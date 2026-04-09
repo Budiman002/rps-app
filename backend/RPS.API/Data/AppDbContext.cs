@@ -23,6 +23,8 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<User>(entity =>
         {
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Id).HasDefaultValueSql("gen_random_uuid()");
             entity.HasIndex(x => x.Email).IsUnique();
             entity.Property(x => x.Role).HasConversion<string>();
             entity.Property(x => x.ContractType).HasConversion<string>();
@@ -30,6 +32,8 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<Project>(entity =>
         {
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Id).HasDefaultValueSql("gen_random_uuid()");
             entity.Property(x => x.Priority).HasConversion<string>();
             entity.Property(x => x.Status).HasConversion<string>();
 
@@ -46,12 +50,16 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<ProjectRoleComposition>(entity =>
         {
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Id).HasDefaultValueSql("gen_random_uuid()");
             entity.Property(x => x.SeniorityLevel).HasConversion<string>();
             entity.Property(x => x.EmploymentStatus).HasConversion<string>();
         });
 
         modelBuilder.Entity<ProjectMember>(entity =>
         {
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Id).HasDefaultValueSql("gen_random_uuid()");
             entity.HasOne(x => x.AssignedByUser)
                 .WithMany()
                 .HasForeignKey(x => x.AssignedBy)
@@ -65,6 +73,8 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<ChangeRequest>(entity =>
         {
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Id).HasDefaultValueSql("gen_random_uuid()");
             entity.Property(x => x.RequestType).HasConversion<string>();
             entity.Property(x => x.Status).HasConversion<string>();
 
@@ -76,6 +86,8 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<ContractExtendRequest>(entity =>
         {
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Id).HasDefaultValueSql("gen_random_uuid()");
             entity.Property(x => x.Status).HasConversion<string>();
 
             entity.HasOne(x => x.Employee)
@@ -91,6 +103,8 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<Notification>(entity =>
         {
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Id).HasDefaultValueSql("gen_random_uuid()");
             entity.HasOne(x => x.Recipient)
                 .WithMany()
                 .HasForeignKey(x => x.RecipientId)

@@ -1,6 +1,5 @@
 ﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
-using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
@@ -16,8 +15,7 @@ namespace RPS.API.Migrations
                 name: "Users",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Id = table.Column<Guid>(type: "uuid", nullable: false, defaultValueSql: "gen_random_uuid()"),
                     FullName = table.Column<string>(type: "text", nullable: false),
                     Email = table.Column<string>(type: "text", nullable: false),
                     Password = table.Column<string>(type: "text", nullable: false),
@@ -37,10 +35,9 @@ namespace RPS.API.Migrations
                 name: "ContractExtendRequests",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    EmployeeId = table.Column<int>(type: "integer", nullable: false),
-                    RequestedBy = table.Column<int>(type: "integer", nullable: false),
+                    Id = table.Column<Guid>(type: "uuid", nullable: false, defaultValueSql: "gen_random_uuid()"),
+                    EmployeeId = table.Column<Guid>(type: "uuid", nullable: false),
+                    RequestedBy = table.Column<Guid>(type: "uuid", nullable: false),
                     Reason = table.Column<string>(type: "text", nullable: false),
                     RequestedEndDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     Status = table.Column<string>(type: "text", nullable: false),
@@ -68,13 +65,12 @@ namespace RPS.API.Migrations
                 name: "Notifications",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    RecipientId = table.Column<int>(type: "integer", nullable: false),
+                    Id = table.Column<Guid>(type: "uuid", nullable: false, defaultValueSql: "gen_random_uuid()"),
+                    RecipientId = table.Column<Guid>(type: "uuid", nullable: false),
                     Type = table.Column<string>(type: "text", nullable: false),
                     Title = table.Column<string>(type: "text", nullable: false),
                     Message = table.Column<string>(type: "text", nullable: false),
-                    ReferenceId = table.Column<int>(type: "integer", nullable: true),
+                    ReferenceId = table.Column<Guid>(type: "uuid", nullable: true),
                     ReferenceType = table.Column<string>(type: "text", nullable: true),
                     IsRead = table.Column<bool>(type: "boolean", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
@@ -94,8 +90,7 @@ namespace RPS.API.Migrations
                 name: "Projects",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Id = table.Column<Guid>(type: "uuid", nullable: false, defaultValueSql: "gen_random_uuid()"),
                     Name = table.Column<string>(type: "text", nullable: false),
                     ClientName = table.Column<string>(type: "text", nullable: false),
                     Description = table.Column<string>(type: "text", nullable: false),
@@ -106,8 +101,8 @@ namespace RPS.API.Migrations
                     ActualStartDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     EstimatedEndDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     DurationWeeks = table.Column<int>(type: "integer", nullable: false),
-                    CreatedBy = table.Column<int>(type: "integer", nullable: false),
-                    AssignedPmId = table.Column<int>(type: "integer", nullable: true),
+                    CreatedBy = table.Column<Guid>(type: "uuid", nullable: false),
+                    AssignedPmId = table.Column<Guid>(type: "uuid", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
@@ -132,10 +127,9 @@ namespace RPS.API.Migrations
                 name: "ChangeRequests",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    ProjectId = table.Column<int>(type: "integer", nullable: false),
-                    RequestedBy = table.Column<int>(type: "integer", nullable: false),
+                    Id = table.Column<Guid>(type: "uuid", nullable: false, defaultValueSql: "gen_random_uuid()"),
+                    ProjectId = table.Column<Guid>(type: "uuid", nullable: false),
+                    RequestedBy = table.Column<Guid>(type: "uuid", nullable: false),
                     ChangeTitle = table.Column<string>(type: "text", nullable: false),
                     ChangeDescription = table.Column<string>(type: "text", nullable: false),
                     RequestType = table.Column<string>(type: "text", nullable: false),
@@ -167,9 +161,8 @@ namespace RPS.API.Migrations
                 name: "ProjectRoleCompositions",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    ProjectId = table.Column<int>(type: "integer", nullable: false),
+                    Id = table.Column<Guid>(type: "uuid", nullable: false, defaultValueSql: "gen_random_uuid()"),
+                    ProjectId = table.Column<Guid>(type: "uuid", nullable: false),
                     RoleTitle = table.Column<string>(type: "text", nullable: false),
                     SeniorityLevel = table.Column<string>(type: "text", nullable: false),
                     EmploymentStatus = table.Column<string>(type: "text", nullable: false),
@@ -192,12 +185,11 @@ namespace RPS.API.Migrations
                 name: "ProjectMembers",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    ProjectId = table.Column<int>(type: "integer", nullable: false),
-                    UserId = table.Column<int>(type: "integer", nullable: false),
-                    RoleCompositionId = table.Column<int>(type: "integer", nullable: false),
-                    AssignedBy = table.Column<int>(type: "integer", nullable: false),
+                    Id = table.Column<Guid>(type: "uuid", nullable: false, defaultValueSql: "gen_random_uuid()"),
+                    ProjectId = table.Column<Guid>(type: "uuid", nullable: false),
+                    UserId = table.Column<Guid>(type: "uuid", nullable: false),
+                    RoleCompositionId = table.Column<Guid>(type: "uuid", nullable: false),
+                    AssignedBy = table.Column<Guid>(type: "uuid", nullable: false),
                     AssignedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
