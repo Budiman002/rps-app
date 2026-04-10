@@ -11,6 +11,8 @@ public class ChangeRequest
     public DateTime? NewStartDate { get; set; }
     public DateTime? NewEndDate { get; set; }
     public int? NewDurationWeeks { get; set; }
+    public string? RoleChangesJson { get; set; }
+    public string? MemberChangesJson { get; set; }
     public RequestStatus Status { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }

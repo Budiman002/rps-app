@@ -109,10 +109,10 @@ export function SignUp() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="marketing">Marketing</SelectItem>
-                    <SelectItem value="gm">General Manager</SelectItem>
-                    <SelectItem value="pm">Project Manager</SelectItem>
-                    <SelectItem value="hr">Human Resources</SelectItem>
+                    <SelectItem value="Marketing">Marketing</SelectItem>
+                    <SelectItem value="GM">General Manager</SelectItem>
+                    <SelectItem value="PM">Project Manager</SelectItem>
+                    <SelectItem value="HR">Human Resources</SelectItem>
                   </SelectContent>
                 </Select>
               )}

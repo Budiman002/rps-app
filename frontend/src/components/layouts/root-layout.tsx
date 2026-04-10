@@ -38,20 +38,20 @@ export function RootLayout() {
   };
 
   const getNavItems = () => {
-    if (user?.role === "hr") {
+    if (user?.role === "HR") {
       return [
         { icon: Users, label: "Employee Management", path: "/app/employees" },
       ];
     }
 
-    if (user?.role === "pm") {
+    if (user?.role === "PM") {
       return [
         { icon: LayoutDashboard, label: "My Dashboard", path: "/app/pm-dashboard" },
         { icon: FolderKanban, label: "My Projects", path: "/app/projects" },
       ];
     }
 
-    if (user?.role === "gm") {
+    if (user?.role === "GM") {
       return [
         { icon: LayoutDashboard, label: "Project Dashboard", path: "/app/dashboard" },
         { icon: FolderKanban, label: "Projects", path: "/app/projects" },

@@ -11,112 +11,87 @@ export type ProjectStatus =
   | "Unassigned"
   | "Scheduled"
   | "InProgress"
-  | "Completed";
+  | "Complete";
 export type Priority = "Low" | "Medium" | "High" | "Critical";
-export type Seniority = "intern" | "junior" | "senior";
+export type Seniority = "Intern" | "Junior" | "Senior";
 
 export interface TeamMember {
-  roleTitle: string;
-  seniorityLevel: Seniority;
-  quantity: number;
-  employmentStatus: "dedicated" | "parallel";
+  id: string;
+  employeeId: string;
+  role: string;
+  seniority: Seniority;
 }
 
 export interface ChangeRequest {
-  id: string;
-  title: string;
-  description: string;
-  type: "timeline" | "roles" | "employees" | "general";
-  status: "pending" | "approved" | "rejected";
-  createdAt: string;
-  changes?: {
-    timeline?: {
-      oldStartDate?: string;
-      newStartDate?: string;
-      oldEndDate?: string;
-      newEndDate?: string;
-      oldDuration?: number;
-      newDuration?: number;
-    };
-    roles?: {
-      added?: Array<{
-        role: string;
-        seniority: Seniority;
-        count: number;
-        allocationType?: "dedicated" | "parallel";
-      }>;
-      removed?: Array<{
-        role: string;
-        seniority: Seniority;
-        count: number;
-        allocationType?: "dedicated" | "parallel";
-      }>;
-      modified?: Array<{
-        role: string;
-        seniority: Seniority;
-        oldCount: number;
-        newCount: number;
-        allocationType?: "dedicated" | "parallel";
-      }>;
-    };
-    employees?: {
-      added?: Array<{ employeeId: string; role: string; seniority: Seniority }>;
-      removed?: Array<{
-        employeeId: string;
-        role: string;
-        seniority: Seniority;
-      }>;
-    };
-  };
+  Id: string;
+  ChangeTitle: string;
+  ChangeDescription: string;
+  RequestType: string;
+  Status: string;
+  CreatedAt: string;
+  NewStartDate?: string;
+  NewEndDate?: string;
+  NewDurationWeeks?: number;
+  RoleChangesJson?: string;
+  MemberChangesJson?: string;
 }
 
 export interface Project {
-  id: string;
-  name: string;
-  clientName: string;
-  description: string;
-  expectedStartDate: string;
-  durationWeeks: number;
-  estimatedEndDate: string;
-  actualStartDate?: string;
-  endDate?: string;
-  priority: Priority;
-  status: ProjectStatus;
-  notesFromMarketing: string;
-  poDocument?: string;
-  teamComposition: Array<{
-    role: string;
-    seniority: Seniority;
-    employmentStatus: "dedicated" | "parallel";
-    quantity: number;
+  Id: string;
+  Name: string;
+  ClientName: string;
+  Description: string;
+  ExpectedStartDate: string;
+  DurationWeeks: number;
+  EstimatedEndDate: string;
+  ActualStartDate?: string;
+  EndDate?: string;
+  Priority: string;
+  Status: string;
+  NotesFromMarketing: string;
+  PoDocument?: string;
+  RoleCompositions: Array<{
+    Id?: string;
+    RoleTitle: string;
+    SeniorityLevel: string;
+    EmploymentStatus: string;
+    Quantity: number;
   }>;
-  assignedMembers?: TeamMember[];
-  pmId?: string;
-  createdAt: string;
-  updatedAt: string;
-  requestChanges?: ChangeRequest[];
+  Members: Array<{
+    Id: string;
+    FullName: string;
+    Email: string;
+    JobTitle: string;
+    SeniorityLevel: string;
+    YearsOfExperience: number;
+  }>;
+  AssignedPmId?: string;
+  CreatedAt: string;
+  UpdatedAt: string;
+  RequestChanges?: ChangeRequest[];
 }
 
 export interface ContractExtensionRequest {
-  id: string;
-  employeeId: string;
-  requestedBy: string;
-  requestedDate: string;
-  proposedEndDate: string;
-  reason: string;
-  status: "pending" | "approved" | "rejected";
+  Id: string;
+  EmployeeId: string;
+  RequestedBy: string;
+  RequestedDate: string;
+  ProposedEndDate: string;
+  Reason: string;
+  Status: "pending" | "approved" | "rejected";
 }
 
 export interface Employee {
-  id: string;
-  fullName: string;
-  email: string;
-  jobTitle: string;
-  seniorityLevel: Seniority;
-  yearsOfExperience: number;
-  contractType: "permanent" | "contract";
-  contractEndDate?: string;
-  createdAt: string;
-  updatedAt: string;
-  extensionRequest?: ContractExtensionRequest;
+  Id: string;
+  FullName: string;
+  Email: string;
+  JobTitle: string;
+  SeniorityLevel: Seniority;
+  YearsOfExperience: number;
+  IsUnavailable: boolean;
+  ContractType: "Permanent" | "Contract";
+  ContractEndDate?: string;
+  CreatedAt: string;
+  UpdatedAt: string;
+  ExtensionRequest?: ContractExtensionRequest;
 }

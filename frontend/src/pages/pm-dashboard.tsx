@@ -15,24 +15,29 @@ import {
 } from "@/components/ui/table";
 import { GanttChart } from "@/components/dashboard/gantt-chart";
 import { GlobalSearch } from "@/components/search/global-search";
-import { Eye, Users, AlertCircle, X, FileEdit } from "lucide-react";
+import { ChangeRequestsSection } from "@/components/project-change-requests/change-requests-section";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Eye, Users, AlertCircle, X, FileEdit, History } from "lucide-react";
 
 export function PMDashboard() {
   const { user } = useAuth();
   const { projects, employees } = useData();
   const navigate = useNavigate();
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("");
+  const [selectedProjectIdForHistory, setSelectedProjectIdForHistory] = useState<string | null>(null);
+
+  const selectedProjectForHistory = projects.find(p => p.Id === selectedProjectIdForHistory);
 
   // Get current PM's employee ID
-  const pmEmployee = employees.find(e => e.email === user?.email);
+  const pmEmployee = employees.find(e => e.Email === user?.email);
 
-  // Filter projects where the PM is assigned
-  const myProjects = useMemo(() => {
-    return projects.filter(project => 
-      project.pmId === pmEmployee?.id && 
-      project.status !== "unassigned"
-    );
-  }, [projects, pmEmployee]);
+  // Backend already filters projects by PM ID for the PM role
+  const myProjects = projects;
 
   const filteredProjects = useMemo(() => {
     if (!selectedEmployeeId) {
@@ -41,37 +46,47 @@ export function PMDashboard() {
     
     // Filter by employee in team (since PM is already filtered)
     return myProjects.filter(project =>
-      project.assignedMembers?.some(t => t.employeeId === selectedEmployeeId)
+      project.Members?.some(m => m.Id === selectedEmployeeId)
     );
   }, [myProjects, selectedEmployeeId]);
 
   const selectedEmployee = useMemo(() => {
-    return selectedEmployeeId ? employees.find(e => e.id === selectedEmployeeId) : null;
+    return selectedEmployeeId ? employees.find(e => e.Id === selectedEmployeeId) : null;
   }, [selectedEmployeeId, employees]);
 
   const stats = useMemo(() => {
     return {
       total: myProjects.length,
-      scheduled: myProjects.filter(p => p.status === "scheduled").length,
-      inProgress: myProjects.filter(p => p.status === "in-progress").length,
-      completed: myProjects.filter(p => p.status === "completed").length,
-      pending: myProjects.reduce((sum, p) => sum + (p.requestChanges?.filter(r => r.status === "pending").length || 0), 0),
+      scheduled: myProjects.filter(p => p.Status === "Scheduled").length,
+      inProgress: myProjects.filter(p => p.Status === "InProgress").length,
+      completed: myProjects.filter(p => p.Status === "Complete").length,
+      pending: myProjects.reduce((sum, p) => sum + (p.RequestChanges?.filter(r => r.Status === "Pending").length || 0), 0),
     };
   }, [myProjects]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case "scheduled":
-        return <Badge className="bg-purple-500">Scheduled</Badge>;
-      case "in-progress":
+      case "Scheduled":
+        return <Badge className="bg-slate-400">Scheduled</Badge>;
+      case "InProgress":
         return <Badge className="bg-blue-500">In Progress</Badge>;
-      case "completed":
-        return <Badge className="bg-green-500">Completed</Badge>;
-      case "unassigned":
-        return <Badge variant="secondary">Unassigned</Badge>;
+      case "Complete":
+        return <Badge className="bg-emerald-500">Completed</Badge>;
+      case "Unassigned":
+        return <Badge variant="secondary" className="bg-zinc-300">Unassigned</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
+  };
+
+  const formatDate = (dateString: string | undefined | null) => {
+    if (!dateString) return "-";
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return dateString;
+    const day = String(date.getDate()).padStart(2, "0");
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const year = date.getFullYear();
+    return `${day}-${month}-${year}`;
   };
 
   return (
@@ -99,7 +114,7 @@ export function PMDashboard() {
             <CardTitle className="text-sm font-medium text-gray-500">Scheduled</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-purple-600">{stats.scheduled}</div>
+            <div className="text-3xl font-bold text-slate-500">{stats.scheduled}</div>
           </CardContent>
         </Card>
         <Card>
@@ -115,7 +130,7 @@ export function PMDashboard() {
             <CardTitle className="text-sm font-medium text-gray-500">Completed</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-green-600">{stats.completed}</div>
+            <div className="text-3xl font-bold text-emerald-600">{stats.completed}</div>
           </CardContent>
         </Card>
         <Card>
@@ -128,7 +143,7 @@ export function PMDashboard() {
         </Card>
       </div>
 
-      {/* Gantt Chart */}
+      {/* Gantt Chart (Assumes projects props are internally handled correctly) */}
       <GanttChart projects={myProjects} />
 
       {/* Projects Table */}
@@ -137,7 +152,7 @@ export function PMDashboard() {
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div className="flex items-center gap-3">
               <CardTitle>
-                {selectedEmployee ? `Projects - ${selectedEmployee.name}` : "My Projects"}
+                {selectedEmployee ? `Projects - ${selectedEmployee.FullName}` : "My Projects"}
               </CardTitle>
               {selectedEmployee && (
                 <Button
@@ -190,28 +205,28 @@ export function PMDashboard() {
                     </TableRow>
                   ) : (
                     filteredProjects.map((project) => {
-                      const pendingRequests = project.requestChanges?.filter(r => r.status === "pending").length || 0;
-                      const hasRequests = (project.requestChanges?.length || 0) > 0;
-                      const canRequestChange = project.status === "scheduled" || project.status === "in-progress";
+                      const pendingRequests = project.RequestChanges?.filter(r => r.Status === "Pending").length || 0;
+                      const hasRequests = (project.RequestChanges?.length || 0) > 0;
+                      const canRequestChange = project.Status === "Scheduled" || project.Status === "InProgress";
 
                       return (
-                        <TableRow key={project.id}>
-                          <TableCell className="font-medium">{project.name}</TableCell>
-                          <TableCell>{project.clientName}</TableCell>
-                          <TableCell>{getStatusBadge(project.status)}</TableCell>
+                        <TableRow key={project.Id}>
+                          <TableCell className="font-medium">{project.Name}</TableCell>
+                          <TableCell>{project.ClientName}</TableCell>
+                          <TableCell>{getStatusBadge(project.Status)}</TableCell>
                           <TableCell>
-                            {project.startDate || project.expectedStartDate || "-"}
+                            {formatDate(project.ActualStartDate || project.ExpectedStartDate)}
                           </TableCell>
                           <TableCell>
-                            {project.endDate || project.estimatedEndDate || "-"}
+                            {formatDate(project.EndDate || project.EstimatedEndDate)}
                           </TableCell>
-                          <TableCell>{project.duration}w</TableCell>
+                          <TableCell>{project.DurationWeeks}w</TableCell>
                           <TableCell>
                             <div className="flex items-center gap-1">
                               <Users className="h-4 w-4 text-gray-400" />
                               <span>
-                                {project.assignedMembers?.length || 0}/
-                                {project.teamComposition.reduce((sum, t) => sum + t.count, 0)}
+                                {project.Members?.length || 0}/
+                                {project.RoleCompositions?.reduce((sum, t) => sum + t.Quantity, 0) || 0}
                               </span>
                             </div>
                           </TableCell>
@@ -227,7 +242,7 @@ export function PMDashboard() {
                             )}
                           </TableCell>
                           <TableCell className="text-gray-500">
-                            {project.lastUpdated}
+                            {formatDate(project.UpdatedAt)}
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex items-center justify-end gap-1">
@@ -236,7 +251,7 @@ export function PMDashboard() {
                                   variant="outline"
                                   size="icon"
                                   onClick={() =>
-                                    navigate(`/app/projects/${project.id}`, {
+                                    navigate(`/app/projects/${project.Id}`, {
                                       state: {
                                         from: "/app/pm-dashboard",
                                         openRequestModal: true,
@@ -251,7 +266,15 @@ export function PMDashboard() {
                               <Button
                                 variant="outline"
                                 size="icon"
-                                onClick={() => navigate(`/app/projects/${project.id}`, { state: { from: '/app/pm-dashboard' } })}
+                                onClick={() => setSelectedProjectIdForHistory(project.Id)}
+                                title="View Request History"
+                              >
+                                <History className="h-4 w-4 text-blue-600" />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={() => navigate(`/app/projects/${project.Id}`, { state: { from: "/app/pm-dashboard" } })}
                               >
                                 <Eye className="h-4 w-4" />
                               </Button>
@@ -267,6 +290,22 @@ export function PMDashboard() {
           )}
         </CardContent>
       </Card>
+
+      {/* Request History Dialog */}
+      <Dialog open={!!selectedProjectIdForHistory} onOpenChange={(open) => !open && setSelectedProjectIdForHistory(null)}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Request History - {selectedProjectForHistory?.Name}</DialogTitle>
+          </DialogHeader>
+          <div className="mt-4">
+            <ChangeRequestsSection 
+              requests={selectedProjectForHistory?.RequestChanges || []} 
+              employees={employees}
+              canManage={false} // PM can't approve their own requests
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

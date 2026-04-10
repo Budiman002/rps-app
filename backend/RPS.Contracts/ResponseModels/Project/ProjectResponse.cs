@@ -17,4 +17,5 @@ public class ProjectResponse
     public DateTime UpdatedAt { get; set; }
     public List<RoleCompositionResponse> RoleCompositions { get; set; } = [];
     public List<MemberResponse> Members { get; set; } = [];
+    public List<ChangeRequestResponse> RequestChanges { get; set; } = [];
 }

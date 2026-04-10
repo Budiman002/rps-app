@@ -19,6 +19,7 @@ public class GetProjectDetailRequestHandler : IRequestHandler<GetProjectDetailRe
     {
         var project = await _context.Projects
             .Include(x => x.RoleCompositions)
+            .Include(x => x.ChangeRequests)
             .Include(x => x.Members)
             .ThenInclude(x => x.Employee)
             .FirstOrDefaultAsync(x => x.Id == request.Id, cancellationToken);
@@ -59,6 +60,20 @@ public class GetProjectDetailRequestHandler : IRequestHandler<GetProjectDetailRe
                 JobTitle = m.Employee.JobTitle,
                 SeniorityLevel = m.Employee.SeniorityLevel,
                 YearsOfExperience = m.Employee.YearsOfExperience
+            }).ToList(),
+            RequestChanges = project.ChangeRequests.Select(cr => new ChangeRequestResponse
+            {
+                Id = cr.Id,
+                ChangeTitle = cr.ChangeTitle,
+                ChangeDescription = cr.ChangeDescription,
+                RequestType = cr.RequestType.ToString(),
+                Status = cr.Status.ToString(),
+                CreatedAt = cr.CreatedAt,
+                NewStartDate = cr.NewStartDate,
+                NewEndDate = cr.NewEndDate,
+                NewDurationWeeks = cr.NewDurationWeeks,
+                RoleChangesJson = cr.RoleChangesJson,
+                MemberChangesJson = cr.MemberChangesJson
             }).ToList()
         };
     }

@@ -10,7 +10,7 @@ export const BackendApiUrl = {
   getProjectById: `${baseUrl}/Project`,
   createProject: `${baseUrl}/Project`,
   updateProject: `${baseUrl}/Project`,
-  getEmployees: `${baseUrl}/employees`,
+  getEmployees: `${baseUrl}/Employee`,
   createChangeRequest: `${baseUrl}/projects/change-requests`,
 };
 

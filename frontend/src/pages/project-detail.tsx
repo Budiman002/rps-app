@@ -6,10 +6,16 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Edit, FileEdit, Calendar, Users, Building2, Flag, Clock } from "lucide-react";
+import { ArrowLeft, Edit, FileEdit, Calendar, Users, Building2, Flag, Clock, History } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { RequestChangeModal } from "@/components/project-change-requests/request-change-modal";
 import { ChangeRequestsSection } from "@/components/project-change-requests/change-requests-section";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 
 export function ProjectDetail() {
@@ -19,8 +25,9 @@ export function ProjectDetail() {
   const navigate = useNavigate();
   const location = useLocation();
   const [showRequestModal, setShowRequestModal] = useState(false);
+  const [selectedProjectIdForHistory, setSelectedProjectIdForHistory] = useState<string | null>(null);
 
-  const project = projects.find(p => p.id === id);
+  const project = projects.find(p => p.Id === id);
 
   // Get the return path from location state, or use a default based on user role
   const getBackPath = () => {
@@ -28,7 +35,7 @@ export function ProjectDetail() {
       return location.state.from;
     }
     // Default fallback based on user role
-    if (user?.role === "pm") {
+    if (user?.role === "PM") {
       return "/app/pm-dashboard";
     }
     return "/app/projects";
@@ -45,13 +52,13 @@ export function ProjectDetail() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case "scheduled":
-        return <Badge className="bg-purple-500">Scheduled</Badge>;
-      case "in-progress":
+      case "Scheduled":
+        return <Badge className="bg-slate-400">Scheduled</Badge>;
+      case "InProgress":
         return <Badge className="bg-blue-500">In Progress</Badge>;
-      case "completed":
-        return <Badge className="bg-green-500">Completed</Badge>;
-      case "unassigned":
+      case "Complete":
+        return <Badge className="bg-emerald-500">Completed</Badge>;
+      case "Unassigned":
         return <Badge variant="secondary">Unassigned</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
@@ -60,13 +67,13 @@ export function ProjectDetail() {
 
   const getPriorityBadge = (priority: string) => {
     switch (priority) {
-      case "critical":
+      case "Critical":
         return <Badge variant="destructive">Critical</Badge>;
-      case "high":
+      case "High":
         return <Badge className="bg-orange-500">High</Badge>;
-      case "medium":
+      case "Medium":
         return <Badge className="bg-yellow-500">Medium</Badge>;
-      case "low":
+      case "Low":
         return <Badge variant="outline">Low</Badge>;
       default:
         return <Badge variant="outline">{priority}</Badge>;
@@ -83,12 +90,12 @@ export function ProjectDetail() {
   };
 
   const getEmployeeDetails = (employeeId: string) => {
-    return employees.find(e => e.id === employeeId);
+    return employees.find(e => e.Id === employeeId);
   };
 
   // Check if current user is the PM of this project
-  const pmEmployee = employees.find(e => e.email === user?.email);
-  const isPM = user?.role === "pm" && project.pmId === pmEmployee?.id;
+  const pmEmployee = employees.find(e => e.Email === user?.email);
+  const isPM = user?.role === "PM" && project.AssignedPmId === pmEmployee?.Id;
 
   useEffect(() => {
     if (isPM && location.state?.openRequestModal) {
@@ -113,28 +120,38 @@ export function ProjectDetail() {
         </Button>
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-bold">{project.name}</h1>
+            <h1 className="text-3xl font-bold">{project.Name}</h1>
             <p className="text-gray-500 mt-1">Project Details</p>
           </div>
           <div className="flex gap-2">
             {isPM && (
-              <Button
-                onClick={() => setShowRequestModal(true)}
-                className="gap-2"
-              >
-                <FileEdit className="h-4 w-4" />
-                Request Changes
-              </Button>
+              <>
+                <Button
+                  onClick={() => setShowRequestModal(true)}
+                  className="gap-2"
+                >
+                  <FileEdit className="h-4 w-4" />
+                  Request Changes
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setSelectedProjectIdForHistory(project.Id)}
+                  className="gap-2 text-blue-600 border-blue-600 hover:bg-blue-50"
+                >
+                  <History className="h-4 w-4" />
+                  View History
+                </Button>
+              </>
             )}
-            {user?.role === "gm" && (
-              <Button
-                onClick={() => navigate(`/app/projects/${project.id}/edit`, { state: { from: location.state?.from } })}
-                className="gap-2"
-              >
-                <Edit className="h-4 w-4" />
-                Edit Project
-              </Button>
-            )}
+            {user?.role === "GM" && (
+                <Button
+                  onClick={() => navigate(`/app/projects/${project.Id}/edit`, { state: { from: location.state?.from } })}
+                  className="gap-2"
+                >
+                  <Edit className="h-4 w-4" />
+                  Edit Project
+                </Button>
+              )}
           </div>
         </div>
       </div>
@@ -150,14 +167,14 @@ export function ProjectDetail() {
               <Building2 className="h-5 w-5 text-gray-400 mt-0.5" />
               <div>
                 <div className="text-sm text-gray-500">Client</div>
-                <div className="font-medium">{project.clientName}</div>
+                <div className="font-medium">{project.ClientName}</div>
               </div>
             </div>
             <div className="flex items-start gap-3">
               <Flag className="h-5 w-5 text-gray-400 mt-0.5" />
               <div>
                 <div className="text-sm text-gray-500">Priority</div>
-                <div className="font-medium">{getPriorityBadge(project.priority)}</div>
+                <div className="font-medium">{getPriorityBadge(project.Priority)}</div>
               </div>
             </div>
             <div className="flex items-start gap-3">
@@ -165,7 +182,7 @@ export function ProjectDetail() {
               <div>
                 <div className="text-sm text-gray-500">Start Date</div>
                 <div className="font-medium">
-                  {project.startDate || project.expectedStartDate || "Not set"}
+                  {project.ActualStartDate || project.ExpectedStartDate || "Not set"}
                 </div>
               </div>
             </div>
@@ -174,7 +191,7 @@ export function ProjectDetail() {
               <div>
                 <div className="text-sm text-gray-500">End Date</div>
                 <div className="font-medium">
-                  {project.endDate || project.estimatedEndDate || "Not set"}
+                  {project.EndDate || project.EstimatedEndDate || "Not set"}
                 </div>
               </div>
             </div>
@@ -182,7 +199,7 @@ export function ProjectDetail() {
               <Clock className="h-5 w-5 text-gray-400 mt-0.5" />
               <div>
                 <div className="text-sm text-gray-500">Duration</div>
-                <div className="font-medium">{project.duration} weeks</div>
+                <div className="font-medium">{project.DurationWeeks} weeks</div>
               </div>
             </div>
             <div className="flex items-start gap-3">
@@ -191,27 +208,27 @@ export function ProjectDetail() {
               </div>
               <div>
                 <div className="text-sm text-gray-500">Status</div>
-                <div className="font-medium">{getStatusBadge(project.status)}</div>
+                <div className="font-medium">{getStatusBadge(project.Status)}</div>
               </div>
             </div>
           </div>
 
-          {project.description && (
+          {project.Description && (
             <>
               <Separator />
               <div>
                 <h3 className="font-semibold mb-2">Description</h3>
-                <p className="text-gray-600">{project.description}</p>
+                <p className="text-gray-600">{project.Description}</p>
               </div>
             </>
           )}
 
-          {project.notes && (
+          {project.NotesFromMarketing && (
             <>
               <Separator />
               <div>
                 <h3 className="font-semibold mb-2">Notes from Marketing</h3>
-                <p className="text-gray-600">{project.notes}</p>
+                <p className="text-gray-600">{project.NotesFromMarketing}</p>
               </div>
             </>
           )}
@@ -226,33 +243,33 @@ export function ProjectDetail() {
             <div className="flex items-center gap-2 text-sm text-gray-500">
               <Users className="h-4 w-4" />
               <span>
-                {project.assignedMembers?.length || 0} / {project.teamComposition.reduce((sum, t) => sum + t.count, 0)}
+                {project.Members?.length || 0} / {project.RoleCompositions?.reduce((sum, t) => sum + t.Quantity, 0) || 0}
               </span>
             </div>
           </div>
         </CardHeader>
         <CardContent>
-          {project.assignedMembers && project.assignedMembers.length > 0 ? (
+          {project.Members && project.Members.length > 0 ? (
             <div className="space-y-4">
-              {project.assignedMembers.map((member) => {
-                const employee = getEmployeeDetails(member.employeeId);
+              {project.Members.map((member) => {
+                const employee = getEmployeeDetails(member.Id);
                 return (
-                  <div key={member.id} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div key={member.Id} className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="flex items-center gap-3">
                       <Avatar className="h-10 w-10">
                         <AvatarFallback>
-                          {employee ? getInitials(employee.name) : "??"}
+                          {employee ? getInitials(employee.FullName) : "??"}
                         </AvatarFallback>
                       </Avatar>
                       <div>
-                        <div className="font-medium">{employee?.name || "Unknown"}</div>
-                        <div className="text-sm text-gray-500">{employee?.email || ""}</div>
+                        <div className="font-medium">{employee?.FullName || "Unknown"}</div>
+                        <div className="text-sm text-gray-500">{employee?.Email || ""}</div>
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="font-medium">{member.role}</div>
+                      <div className="font-medium">{member.JobTitle}</div>
                       <Badge variant="outline" className="mt-1 capitalize">
-                        {member.seniority}
+                        {member.SeniorityLevel}
                       </Badge>
                     </div>
                   </div>
@@ -263,10 +280,10 @@ export function ProjectDetail() {
             <div className="text-center py-8 text-gray-500">
               <Users className="h-12 w-12 mx-auto mb-2 text-gray-300" />
               <p>No team members assigned yet</p>
-              {user?.role === "gm" && project.status === "unassigned" && (
+              {user?.role === "GM" && project.Status === "Unassigned" && (
                 <Button
                   className="mt-4"
-                  onClick={() => navigate(`/app/projects/${project.id}/assign`)}
+                  onClick={() => navigate(`/app/projects/${project.Id}/assign`)}
                 >
                   Assign Team Members
                 </Button>
@@ -283,14 +300,14 @@ export function ProjectDetail() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            {project.teamComposition.map((comp, index) => (
+            {project.RoleCompositions?.map((comp, index) => (
               <div key={index} className="p-4 border rounded-lg">
-                <div className="font-medium">{comp.role}</div>
+                <div className="font-medium">{comp.RoleTitle}</div>
                 <div className="flex items-center justify-between mt-2">
                   <Badge variant="outline" className="capitalize">
-                    {comp.seniority}
+                    {comp.SeniorityLevel}
                   </Badge>
-                  <span className="text-sm text-gray-500">×{comp.count}</span>
+                  <span className="text-sm text-gray-500">×{comp.Quantity}</span>
                 </div>
               </div>
             ))}
@@ -299,19 +316,19 @@ export function ProjectDetail() {
       </Card>
 
       {/* Change Requests (if any) */}
-      {project.requestChanges && project.requestChanges.length > 0 && (user?.role === "gm" || isPM) && (
+      {project.RequestChanges && project.RequestChanges.length > 0 && (user?.role === "GM" || isPM) && (
         <ChangeRequestsSection
-          requests={project.requestChanges}
+          requests={project.RequestChanges}
           employees={employees}
           onApprove={(requestId) => {
-            approveChangeRequest(project.id, requestId);
+            approveChangeRequest(project.Id, requestId);
             toast.success("Change request approved");
           }}
           onReject={(requestId) => {
-            rejectChangeRequest(project.id, requestId);
+            rejectChangeRequest(project.Id, requestId);
             toast.error("Change request rejected");
           }}
-          canManage={user?.role === "gm"}
+          canManage={user?.role === "GM"}
         />
       )}
 
@@ -323,11 +340,27 @@ export function ProjectDetail() {
           project={project}
           employees={employees}
           onSubmit={(changeRequest) => {
-            addDetailedRequestChange(project.id, changeRequest);
+            addDetailedRequestChange(project.Id, changeRequest);
             toast.success("Change request submitted successfully");
           }}
         />
       )}
+
+      {/* Request History Dialog */}
+      <Dialog open={!!selectedProjectIdForHistory} onOpenChange={(open) => !open && setSelectedProjectIdForHistory(null)}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Request History - {project.Name}</DialogTitle>
+          </DialogHeader>
+          <div className="mt-4">
+            <ChangeRequestsSection 
+              requests={project.RequestChanges || []} 
+              employees={employees}
+              canManage={false}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

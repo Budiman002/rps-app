@@ -3,12 +3,12 @@ import { useAuth } from "@/contexts/auth-context";
 
 export function getRoleHomePath(role?: string) {
   switch (role) {
-    case "pm":
+    case "PM":
       return "/app/pm-dashboard";
-    case "hr":
+    case "HR":
       return "/app/employees";
-    case "gm":
-    case "marketing":
+    case "GM":
+    case "Marketing":
     default:
       return "/app/dashboard";
   }
@@ -34,7 +34,7 @@ export function RoleRoute({
   allowedRoles,
   children,
 }: {
-  allowedRoles: Array<"marketing" | "gm" | "pm" | "hr">;
+  allowedRoles: Array<"Marketing" | "GM" | "PM" | "HR">;
   children: React.ReactNode;
 }) {
   const { user, isLoading, isAuthenticated } = useAuth();

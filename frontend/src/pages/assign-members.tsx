@@ -19,7 +19,7 @@ export function AssignMembers() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const project = projects.find(p => p.id === id);
+  const project = projects.find(p => p.Id === id);
   const [assignments, setAssignments] = useState<Record<string, string>>({});
   const [aiAssignedKeys, setAiAssignedKeys] = useState<Set<string>>(new Set());
   const [actualStartDate, setActualStartDate] = useState("");
@@ -35,7 +35,7 @@ export function AssignMembers() {
     );
   }
 
-  if (user?.role !== "gm") {
+  if (user?.role !== "GM") {
     return (
       <div className="text-center py-12">
         <h2 className="text-2xl font-bold mb-2">Access Denied</h2>
@@ -47,11 +47,11 @@ export function AssignMembers() {
 
   // Generate unique keys for each role requirement
   const roleRequirements = useMemo(() => {
-    return project.teamComposition.flatMap((comp, compIndex) =>
-      Array.from({ length: comp.count }, (_, index) => ({
-        key: `${comp.role}-${comp.seniority}-${compIndex}-${index}`,
-        role: comp.role,
-        seniority: comp.seniority,
+    return (project.RoleCompositions || []).flatMap((comp, compIndex) =>
+      Array.from({ length: comp.Quantity }, (_, index) => ({
+        key: `${comp.RoleTitle}-${comp.SeniorityLevel}-${compIndex}-${index}`,
+        role: comp.RoleTitle,
+        seniority: comp.SeniorityLevel,
       }))
     );
   }, [project]);
@@ -59,23 +59,15 @@ export function AssignMembers() {
   // Filter available employees for each role based on start date
   const getAvailableEmployees = (role: string, seniority: string, startDate?: string) => {
     return employees.filter((emp) => {
-      if (emp.role !== role || emp.seniority !== seniority) return false;
+      if (emp.JobTitle !== role || emp.SeniorityLevel !== seniority) return false;
 
-      // If employee is not dedicated, they're available
-      if (!emp.isDedicated) return true;
-
-      // If employee is dedicated and we have a start date, check if they'll be free by then
-      if (startDate && emp.isDedicated) {
-        const empProject = projects.find((p) => p.id === emp.currentProject || p.name === emp.currentProject);
-        const projectEndDate = empProject?.endDate || empProject?.estimatedEndDate;
-
-        if (projectEndDate) {
-          // Employee is available if their project ends before the start date
-          return new Date(projectEndDate) < new Date(startDate);
-        }
+      // Simple availability check: if they have a contract that ends before start date
+      if (startDate && emp.ContractType === "Contract" && emp.ContractEndDate) {
+          return new Date(emp.ContractEndDate) < new Date(startDate);
       }
-
-      return false;
+      
+      // For now, assume Available if not explicitly marked Unavailable
+      return !emp.IsUnavailable;
     });
   };
 
@@ -91,53 +83,28 @@ export function AssignMembers() {
     roleRequirements.forEach((req) => {
       const available = getAvailableEmployees(req.role, req.seniority);
       if (available.length === 0) {
-        // Find dedicated employees with this role/seniority
+        // Mocking some fallback for demo/consistency if needed, 
+        // but let's keep it simple for now as we don't have complex project assignment state on employees yet
         const dedicated = employees.filter(
           (emp) =>
-            emp.role === req.role &&
-            emp.seniority === req.seniority &&
-            emp.isDedicated
+            emp.JobTitle === req.role &&
+            emp.SeniorityLevel === req.seniority &&
+            emp.IsUnavailable
         );
 
-        // Find their projects' end dates
-        const projectEndDates = dedicated
-          .map((emp) => {
-            const empProject = projects.find((p) => p.id === emp.currentProject || p.name === emp.currentProject);
-            return {
-              employee: emp.name,
-              endDate: empProject?.endDate || empProject?.estimatedEndDate,
-            };
-          })
-          .filter((item) => item.endDate);
-
-        // Get the earliest available date (minimum end date)
-        const earliestDate = projectEndDates.length > 0
-          ? projectEndDates.sort((a, b) => 
-              new Date(a.endDate!).getTime() - new Date(b.endDate!).getTime()
-            )[0].endDate
-          : null;
-
-        if (earliestDate) {
-          unavailableRoles.push({
+        unavailableRoles.push({
             role: req.role,
             seniority: req.seniority,
-            availableDate: earliestDate,
-            dedicatedEmployees: dedicated.map((e) => e.name),
-          });
-        }
+            availableDate: new Date().toISOString().split("T")[0]!,
+            dedicatedEmployees: dedicated.map((e) => e.FullName),
+        });
       }
     });
 
     // Calculate recommended start date (latest of all earliest dates)
-    let recommendedStartDate: string | null = null;
+    let recommendedStartDate: string = "";
     if (unavailableRoles.length > 0) {
-      const latestDate = unavailableRoles
-        .map((r) => new Date(r.availableDate))
-        .sort((a, b) => b.getTime() - a.getTime())[0];
-      
-      // Add 1 day buffer after project completion
-      latestDate.setDate(latestDate.getDate() + 1);
-      recommendedStartDate = latestDate.toISOString().split("T")[0];
+      recommendedStartDate = new Date().toISOString().split("T")[0]!;
     }
 
     return {
@@ -149,57 +116,32 @@ export function AssignMembers() {
 
   // Auto-populate start date when component loads or resource availability changes
   useEffect(() => {
-    if (project && resourceAvailability.recommendedStartDate) {
-      // AI recommends a later start date due to resource constraints
-      setActualStartDate(resourceAvailability.recommendedStartDate);
-      setIsStartDateAiRecommended(true);
-    } else if (project && !actualStartDate) {
-      // No resource issues, use expected start date
-      setActualStartDate(project.expectedStartDate);
+    if (project && !actualStartDate) {
+      setActualStartDate(project.ActualStartDate || project.ExpectedStartDate);
       setIsStartDateAiRecommended(false);
     }
-  }, [project, resourceAvailability.recommendedStartDate]);
+  }, [project]);
 
   // AI Auto-assignment on component mount (runs after start date is set)
   useEffect(() => {
     if (!project || !actualStartDate) return;
 
-    // Automatically assign team members when component loads
     const newAssignments: Record<string, string> = {};
     const assignedEmployeeIds = new Set<string>();
 
     roleRequirements.forEach((req) => {
-      // Get all employees matching role and seniority, considering the start date
       let availableEmployees = employees.filter((emp) => {
-        if (emp.role !== req.role || emp.seniority !== req.seniority) return false;
-        if (assignedEmployeeIds.has(emp.id)) return false;
-
-        // If employee is not dedicated, they're available
-        if (!emp.isDedicated) return true;
-
-        // If employee is dedicated, check if they'll be free by the start date
-        const empProject = projects.find((p) => p.id === emp.currentProject || p.name === emp.currentProject);
-        const projectEndDate = empProject?.endDate || empProject?.estimatedEndDate;
-
-        if (projectEndDate) {
-          // Employee is available if their project ends before the start date
-          return new Date(projectEndDate) < new Date(actualStartDate);
-        }
-
-        return false;
+        if (emp.JobTitle !== req.role || emp.SeniorityLevel !== req.seniority) return false;
+        if (assignedEmployeeIds.has(emp.Id)) return false;
+        return !emp.IsUnavailable;
       });
 
-      // Prioritize non-dedicated employees
-      availableEmployees.sort((a, b) => {
-        if (a.isDedicated === b.isDedicated) return 0;
-        return a.isDedicated ? 1 : -1;
-      });
-
-      // Assign the best available employee
       if (availableEmployees.length > 0) {
         const selectedEmployee = availableEmployees[0];
-        newAssignments[req.key] = selectedEmployee.id;
-        assignedEmployeeIds.add(selectedEmployee.id);
+        if (selectedEmployee) {
+          newAssignments[req.key] = selectedEmployee.Id;
+          assignedEmployeeIds.add(selectedEmployee.Id);
+        }
       }
     });
 
@@ -209,30 +151,11 @@ export function AssignMembers() {
 
   const handleUpdateStartDate = () => {
     if (!resourceAvailability.recommendedStartDate) return;
-
-    const newStartDate = resourceAvailability.recommendedStartDate;
-    // Calculate new estimated end date
-    const startDate = new Date(newStartDate);
-    const endDate = new Date(startDate);
-    endDate.setDate(endDate.getDate() + project.duration * 7);
-    const newEndDate = endDate.toISOString().split("T")[0];
-
-    updateProject(project.id, {
-      expectedStartDate: newStartDate,
-      estimatedEndDate: newEndDate,
-    });
-
-    toast.success("Project dates updated", {
-      description: `Start date changed to ${new Date(newStartDate).toLocaleDateString()}`,
-    });
-
-    // Navigate back to project detail page
-    navigate(`/app/projects/${project.id}`, { state: { from: location.state?.from } });
+    setActualStartDate(resourceAvailability.recommendedStartDate);
   };
 
   const handleAssign = (key: string, employeeId: string) => {
     setAssignments({ ...assignments, [key]: employeeId });
-    // Remove AI flag when manually changed
     const newAiAssigned = new Set(aiAssignedKeys);
     newAiAssigned.delete(key);
     setAiAssignedKeys(newAiAssigned);
@@ -240,20 +163,17 @@ export function AssignMembers() {
 
   const handleStartDateChange = (date: string) => {
     setActualStartDate(date);
-    // Remove AI recommendation flag when manually changed
     setIsStartDateAiRecommended(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Check if start date is provided
     if (!actualStartDate) {
       toast.error("Please provide a start date");
       return;
     }
 
-    // Check if all roles are assigned
     const unassignedRoles = roleRequirements.filter((req) => !assignments[req.key]);
     if (unassignedRoles.length > 0) {
       toast.error("Please assign all required roles");
@@ -262,39 +182,33 @@ export function AssignMembers() {
 
     setLoading(true);
     try {
-      const teamMembers: TeamMember[] = roleRequirements.map((req) => ({
-        id: `TM${Date.now()}-${Math.random()}`,
-        employeeId: assignments[req.key],
-        role: req.role,
-        seniority: req.seniority,
-      }));
+      const teamMembers: TeamMember[] = roleRequirements
+        .filter(req => assignments[req.key])
+        .map((req) => ({
+          id: `TM${Date.now()}-${Math.random()}`,
+          employeeId: assignments[req.key]!,
+          role: req.role,
+          seniority: req.seniority as any,
+        }));
 
-      // Find PM in assignments
       const pmAssignment = roleRequirements.find((req) => req.role === "Project Manager");
       const pmId = pmAssignment ? assignments[pmAssignment.key] : "";
 
-      // Calculate end date based on actual start date
-      const startDate = new Date(actualStartDate);
-      const endDate = new Date(startDate);
-      endDate.setDate(endDate.getDate() + project.duration * 7);
-      const actualEndDate = endDate.toISOString().split("T")[0];
-
       // Update project with actual dates first
-      updateProject(project.id, {
-        startDate: actualStartDate,
-        endDate: actualEndDate,
+      const currentId = project.Id;
+      if (!currentId) throw new Error("Project ID is missing");
+      const todayDate = new Date().toISOString().split("T")[0]!;
+
+      await updateProject(currentId, {
+        ActualStartDate: actualStartDate,
+        Status: actualStartDate > todayDate ? "Scheduled" : "InProgress"
       });
 
       // Then assign team members
-      assignMembers(project.id, teamMembers, pmId);
+      await assignMembers(currentId, teamMembers, pmId!);
 
-      const today = new Date().toISOString().split("T")[0];
-      const statusText = actualStartDate > today ? "Scheduled" : "In Progress";
-
-      toast.success("Team members assigned successfully", {
-        description: `Project status updated to ${statusText}`,
-      });
-      navigate(`/app/projects/${project.id}`, { state: { from: location.state?.from } });
+      toast.success("Team members assigned successfully");
+      navigate(`/app/projects/${project.Id}`, { state: { from: location.state?.from } });
     } catch (error) {
       toast.error("Failed to assign team members");
     } finally {
@@ -308,7 +222,7 @@ export function AssignMembers() {
         <Button
           variant="ghost"
           className="gap-2 mb-4"
-          onClick={() => navigate(`/app/projects/${project.id}`, { state: { from: location.state?.from } })}
+          onClick={() => navigate(`/app/projects/${project.Id}`, { state: { from: location.state?.from } })}
         >
           <ArrowLeft className="h-4 w-4" />
           Back to Project
@@ -320,9 +234,9 @@ export function AssignMembers() {
       <form onSubmit={handleSubmit}>
         <Card>
           <CardHeader>
-            <CardTitle>{project.name}</CardTitle>
+            <CardTitle>{project.Name}</CardTitle>
             <CardDescription>
-              Client: {project.clientName} • Duration: {project.duration} weeks
+              Client: {project.ClientName} • Duration: {project.DurationWeeks} weeks
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -361,7 +275,7 @@ export function AssignMembers() {
                     <Label className="text-sm text-gray-600">Expected Start Date (from Marketing)</Label>
                     <Input
                       type="text"
-                      value={new Date(project.expectedStartDate).toLocaleDateString()}
+                      value={new Date(project.ExpectedStartDate).toLocaleDateString()}
                       disabled
                       className="bg-gray-50"
                     />
@@ -409,10 +323,10 @@ export function AssignMembers() {
                             {unavailable.seniority} {unavailable.role}
                           </div>
                           <div className="text-gray-600 mt-1">
-                            Available after: {new Date(unavailable.availableDate).toLocaleDateString()}
+                            Current Date used for planning: {new Date(unavailable.availableDate).toLocaleDateString()}
                           </div>
                           <div className="text-gray-600 text-[11px] mt-0.5">
-                            Currently assigned: {unavailable.dedicatedEmployees.join(", ")}
+                            Currently unavailable team: {unavailable.dedicatedEmployees.join(", ")}
                           </div>
                         </div>
                       ))}
@@ -434,7 +348,7 @@ export function AssignMembers() {
                               })}
                             </div>
                             <div className="text-xs text-gray-600 mt-1">
-                              Current start date: {new Date(project.expectedStartDate).toLocaleDateString()}
+                              Expected start date: {new Date(project.ExpectedStartDate).toLocaleDateString()}
                             </div>
                           </div>
                           <Button
@@ -497,8 +411,8 @@ export function AssignMembers() {
                             </div>
                           ) : (
                             availableEmployees.map((emp) => (
-                              <SelectItem key={emp.id} value={emp.id}>
-                                {emp.name} - {emp.email}
+                              <SelectItem key={emp.Id} value={emp.Id}>
+                                {emp.FullName} - {emp.Email}
                               </SelectItem>
                             ))
                           )}
@@ -533,7 +447,7 @@ export function AssignMembers() {
           <Button
             type="button"
             variant="outline"
-            onClick={() => navigate(`/app/projects/${project.id}`, { state: { from: location.state?.from } })}
+            onClick={() => navigate(`/app/projects/${project.Id}`, { state: { from: location.state?.from } })}
           >
             Cancel
           </Button>

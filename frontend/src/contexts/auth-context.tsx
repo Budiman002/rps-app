@@ -31,11 +31,11 @@ const ACCESS_TOKEN_STORAGE_KEY = "rps_access_token";
 const USER_STORAGE_KEY = "rps_user";
 
 interface AuthApiResponse {
-  token: string;
-  id: string;
-  fullName: string;
-  email: string;
-  role: string;
+  Token: string;
+  Id: string;
+  FullName: string;
+  Email: string;
+  Role: string;
 }
 
 const validRoles: UserRole[] = ["Marketing", "GM", "PM", "HR"];
@@ -113,15 +113,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const authData = (await response.json()) as AuthApiResponse;
     const loggedInUser: User = {
-      id: authData.id,
-      name: authData.fullName,
-      email: authData.email,
-      role: toUserRole(authData.role),
+      id: authData.Id,
+      name: authData.FullName,
+      email: authData.Email,
+      role: toUserRole(authData.Role),
     };
 
-    setToken(authData.token);
+    setToken(authData.Token);
     setUser(loggedInUser);
-    localStorage.setItem(ACCESS_TOKEN_STORAGE_KEY, authData.token);
+    localStorage.setItem(ACCESS_TOKEN_STORAGE_KEY, authData.Token);
     localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(loggedInUser));
   };
 
@@ -153,15 +153,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const authData = (await response.json()) as AuthApiResponse;
     const registeredUser: User = {
-      id: authData.id,
-      name: authData.fullName,
-      email: authData.email,
-      role: toUserRole(authData.role),
+      id: authData.Id,
+      name: authData.FullName,
+      email: authData.Email,
+      role: toUserRole(authData.Role),
     };
 
-    setToken(authData.token);
+    setToken(authData.Token);
     setUser(registeredUser);
-    localStorage.setItem(ACCESS_TOKEN_STORAGE_KEY, authData.token);
+    localStorage.setItem(ACCESS_TOKEN_STORAGE_KEY, authData.Token);
     localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(registeredUser));
   };
 
