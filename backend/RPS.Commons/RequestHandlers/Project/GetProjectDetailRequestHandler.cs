@@ -57,11 +57,12 @@ public class GetProjectDetailRequestHandler : IRequestHandler<GetProjectDetailRe
             }).ToList(),
             Members = project.Members.Select(m => new MemberResponse
             {
-                Id = m.User.Id,
-                FullName = m.User.FullName,
-                Email = m.User.Email,
-                Role = m.User.Role.ToString(),
-                YearsOfExperience = m.User.YearsOfExperience,
+                Id = m.Employee.Id,
+                FullName = m.Employee.FullName,
+                Email = m.Employee.Email,
+                JobTitle = m.Employee.JobTitle,
+                SeniorityLevel = m.Employee.SeniorityLevel,
+                YearsOfExperience = m.Employee.YearsOfExperience,
                 RoleCompositionId = m.RoleCompositionId,
                 RoleTitle = m.RoleComposition?.RoleTitle ?? string.Empty,
                 SeniorityLevel = m.RoleComposition?.SeniorityLevel.ToString() ?? string.Empty

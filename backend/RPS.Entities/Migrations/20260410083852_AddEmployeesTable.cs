@@ -6,11 +6,31 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace RPS.Entities.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreate : Migration
+    public partial class AddEmployeesTable : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.CreateTable(
+                name: "Employees",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false, defaultValueSql: "gen_random_uuid()"),
+                    FullName = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    Email = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    JobTitle = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    SeniorityLevel = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    ContractType = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    ContractEndDate = table.Column<DateTime>(type: "timestamp without time zone", nullable: true),
+                    YearsOfExperience = table.Column<int>(type: "integer", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Employees", x => x.Id);
+                });
+
             migrationBuilder.CreateTable(
                 name: "Users",
                 columns: table => new
@@ -48,9 +68,9 @@ namespace RPS.Entities.Migrations
                 {
                     table.PrimaryKey("PK_ContractExtendRequests", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_ContractExtendRequests_Users_EmployeeId",
+                        name: "FK_ContractExtendRequests_Employees_EmployeeId",
                         column: x => x.EmployeeId,
-                        principalTable: "Users",
+                        principalTable: "Employees",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
@@ -187,7 +207,7 @@ namespace RPS.Entities.Migrations
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false, defaultValueSql: "gen_random_uuid()"),
                     ProjectId = table.Column<Guid>(type: "uuid", nullable: false),
-                    UserId = table.Column<Guid>(type: "uuid", nullable: false),
+                    EmployeeId = table.Column<Guid>(type: "uuid", nullable: false),
                     RoleCompositionId = table.Column<Guid>(type: "uuid", nullable: false),
                     AssignedBy = table.Column<Guid>(type: "uuid", nullable: false),
                     AssignedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: false)
@@ -195,6 +215,12 @@ namespace RPS.Entities.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_ProjectMembers", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_ProjectMembers_Employees_EmployeeId",
+                        column: x => x.EmployeeId,
+                        principalTable: "Employees",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_ProjectMembers_ProjectRoleCompositions_RoleCompositionId",
                         column: x => x.RoleCompositionId,
@@ -210,12 +236,6 @@ namespace RPS.Entities.Migrations
                     table.ForeignKey(
                         name: "FK_ProjectMembers_Users_AssignedBy",
                         column: x => x.AssignedBy,
-                        principalTable: "Users",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
-                        name: "FK_ProjectMembers_Users_UserId",
-                        column: x => x.UserId,
                         principalTable: "Users",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
@@ -252,6 +272,11 @@ namespace RPS.Entities.Migrations
                 column: "AssignedBy");
 
             migrationBuilder.CreateIndex(
+                name: "IX_ProjectMembers_EmployeeId",
+                table: "ProjectMembers",
+                column: "EmployeeId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_ProjectMembers_ProjectId",
                 table: "ProjectMembers",
                 column: "ProjectId");
@@ -260,11 +285,6 @@ namespace RPS.Entities.Migrations
                 name: "IX_ProjectMembers_RoleCompositionId",
                 table: "ProjectMembers",
                 column: "RoleCompositionId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_ProjectMembers_UserId",
-                table: "ProjectMembers",
-                column: "UserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ProjectRoleCompositions_ProjectId",
@@ -302,6 +322,9 @@ namespace RPS.Entities.Migrations
 
             migrationBuilder.DropTable(
                 name: "ProjectMembers");
+
+            migrationBuilder.DropTable(
+                name: "Employees");
 
             migrationBuilder.DropTable(
                 name: "ProjectRoleCompositions");
