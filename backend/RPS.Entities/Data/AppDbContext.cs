@@ -9,6 +9,7 @@ public class AppDbContext : DbContext
     }
 
     public DbSet<User> Users => Set<User>();
+    public DbSet<Employee> Employees => Set<Employee>();
     public DbSet<Project> Projects => Set<Project>();
     public DbSet<ProjectRoleComposition> ProjectRoleCompositions => Set<ProjectRoleComposition>();
     public DbSet<ProjectMember> ProjectMembers => Set<ProjectMember>();
@@ -27,6 +28,11 @@ public class AppDbContext : DbContext
             entity.HasIndex(x => x.Email).IsUnique();
             entity.Property(x => x.Role).HasConversion<string>();
             entity.Property(x => x.ContractType).HasConversion<string>();
+        });
+
+        modelBuilder.Entity<Employee>(entity =>
+        {
+            entity.Property(e => e.Id).HasDefaultValueSql("gen_random_uuid()");
         });
 
         modelBuilder.Entity<Project>(entity =>
@@ -61,9 +67,9 @@ public class AppDbContext : DbContext
                 .HasForeignKey(x => x.AssignedBy)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            entity.HasOne(x => x.User)
+            entity.HasOne(x => x.Employee)
                 .WithMany()
-                .HasForeignKey(x => x.UserId)
+                .HasForeignKey(x => x.EmployeeId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
 

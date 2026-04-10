@@ -20,7 +20,7 @@ public class GetProjectListRequestHandler : IRequestHandler<GetProjectListReques
         var query = _context.Projects
             .Include(x => x.RoleCompositions)
             .Include(x => x.Members)
-            .ThenInclude(x => x.User)
+            .ThenInclude(x => x.Employee)
             .AsQueryable();
 
         if (request.UserRole.Equals(UserRole.PM.ToString(), StringComparison.OrdinalIgnoreCase))
@@ -62,11 +62,12 @@ public class GetProjectListRequestHandler : IRequestHandler<GetProjectListReques
             }).ToList(),
             Members = project.Members.Select(m => new MemberResponse
             {
-                Id = m.User.Id,
-                FullName = m.User.FullName,
-                Email = m.User.Email,
-                Role = m.User.Role.ToString(),
-                YearsOfExperience = m.User.YearsOfExperience
+                Id = m.Employee.Id,
+                FullName = m.Employee.FullName,
+                Email = m.Employee.Email,
+                JobTitle = m.Employee.JobTitle,
+                SeniorityLevel = m.Employee.SeniorityLevel,
+                YearsOfExperience = m.Employee.YearsOfExperience
             }).ToList()
         };
     }

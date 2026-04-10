@@ -12,8 +12,8 @@ using RPS.Entities;
 namespace RPS.Entities.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260410031801_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20260410083852_AddEmployeesTable")]
+    partial class AddEmployeesTable
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -115,6 +115,55 @@ namespace RPS.Entities.Migrations
                     b.HasIndex("RequestedBy");
 
                     b.ToTable("ContractExtendRequests");
+                });
+
+            modelBuilder.Entity("RPS.Entities.Employee", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<DateTime?>("ContractEndDate")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("ContractType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("JobTitle")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("SeniorityLevel")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("YearsOfExperience")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Employees");
                 });
 
             modelBuilder.Entity("RPS.Entities.Notification", b =>
@@ -235,24 +284,24 @@ namespace RPS.Entities.Migrations
                     b.Property<Guid>("AssignedBy")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid>("EmployeeId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid>("ProjectId")
                         .HasColumnType("uuid");
 
                     b.Property<Guid>("RoleCompositionId")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
-
                     b.HasKey("Id");
 
                     b.HasIndex("AssignedBy");
 
+                    b.HasIndex("EmployeeId");
+
                     b.HasIndex("ProjectId");
 
                     b.HasIndex("RoleCompositionId");
-
-                    b.HasIndex("UserId");
 
                     b.ToTable("ProjectMembers");
                 });
@@ -363,7 +412,7 @@ namespace RPS.Entities.Migrations
 
             modelBuilder.Entity("RPS.Entities.ContractExtendRequest", b =>
                 {
-                    b.HasOne("RPS.Entities.User", "Employee")
+                    b.HasOne("RPS.Entities.Employee", "Employee")
                         .WithMany()
                         .HasForeignKey("EmployeeId")
                         .OnDelete(DeleteBehavior.Restrict)
@@ -417,6 +466,12 @@ namespace RPS.Entities.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("RPS.Entities.Employee", "Employee")
+                        .WithMany()
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("RPS.Entities.Project", "Project")
                         .WithMany("Members")
                         .HasForeignKey("ProjectId")
@@ -429,19 +484,13 @@ namespace RPS.Entities.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("RPS.Entities.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
                     b.Navigation("AssignedByUser");
+
+                    b.Navigation("Employee");
 
                     b.Navigation("Project");
 
                     b.Navigation("RoleComposition");
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("RPS.Entities.ProjectRoleComposition", b =>
