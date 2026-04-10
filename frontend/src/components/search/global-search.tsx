@@ -43,9 +43,9 @@ export function GlobalSearch({ onEmployeeSelect, placeholder = "Search projects 
     // Search employees
     const matchingEmployees = employees.filter(
       (employee) =>
-        employee.name.toLowerCase().includes(lowerQuery) ||
+        employee.fullName.toLowerCase().includes(lowerQuery) ||
         employee.email.toLowerCase().includes(lowerQuery) ||
-        employee.role.toLowerCase().includes(lowerQuery)
+        employee.jobTitle.toLowerCase().includes(lowerQuery)
     );
 
     return {
@@ -82,7 +82,7 @@ export function GlobalSearch({ onEmployeeSelect, placeholder = "Search projects 
   // Get employee projects count
   const getEmployeeProjectCount = (employeeId: string) => {
     return projects.filter(
-      (p) => p.pmId === employeeId || p.assignedMembers?.some((t) => t.employeeId === employeeId)
+      (p) => p.assignedPmId === employeeId || p.members?.some((t) => t.employeeId === employeeId)
     ).length;
   };
 
@@ -165,11 +165,11 @@ export function GlobalSearch({ onEmployeeSelect, placeholder = "Search projects 
                   >
                     <User className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <div className="font-medium text-sm truncate">{employee.name}</div>
+                      <div className="font-medium text-sm truncate">{employee.fullName}</div>
                       <div className="text-xs text-gray-500 truncate">{employee.email}</div>
                       <div className="flex items-center gap-2 mt-1">
                         <Badge variant="outline" className="text-xs capitalize">
-                          {employee.role}
+                          {employee.jobTitle}
                         </Badge>
                         {projectCount > 0 && (
                           <span className="text-xs text-gray-500">

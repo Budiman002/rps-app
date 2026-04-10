@@ -28,7 +28,7 @@ export function ProjectDetail() {
       return location.state.from;
     }
     // Default fallback based on user role
-    if (user?.role === "pm") {
+    if (user?.role === "PM") {
       return "/app/pm-dashboard";
     }
     return "/app/projects";
@@ -88,7 +88,7 @@ export function ProjectDetail() {
 
   // Check if current user is the PM of this project
   const pmEmployee = employees.find(e => e.email === user?.email);
-  const isPM = user?.role === "pm" && project.pmId === pmEmployee?.id;
+  const isPM = user?.role === "PM" && project.assignedPmId === pmEmployee?.id;
 
   useEffect(() => {
     if (isPM && location.state?.openRequestModal) {
@@ -126,7 +126,7 @@ export function ProjectDetail() {
                 Request Changes
               </Button>
             )}
-            {user?.role === "gm" && (
+            {user?.role === "GM" && (
               <Button
                 onClick={() => navigate(`/app/projects/${project.id}/edit`, { state: { from: location.state?.from } })}
                 className="gap-2"
@@ -165,7 +165,7 @@ export function ProjectDetail() {
               <div>
                 <div className="text-sm text-gray-500">Start Date</div>
                 <div className="font-medium">
-                  {project.startDate || project.expectedStartDate || "Not set"}
+                  {project.actualStartDate || project.expectedStartDate || "Not set"}
                 </div>
               </div>
             </div>
@@ -182,7 +182,7 @@ export function ProjectDetail() {
               <Clock className="h-5 w-5 text-gray-400 mt-0.5" />
               <div>
                 <div className="text-sm text-gray-500">Duration</div>
-                <div className="font-medium">{project.duration} weeks</div>
+                <div className="font-medium">{project.durationWeeks} weeks</div>
               </div>
             </div>
             <div className="flex items-start gap-3">
@@ -206,12 +206,12 @@ export function ProjectDetail() {
             </>
           )}
 
-          {project.notes && (
+          {project.notesFromMarketing && (
             <>
               <Separator />
               <div>
                 <h3 className="font-semibold mb-2">Notes from Marketing</h3>
-                <p className="text-gray-600">{project.notes}</p>
+                <p className="text-gray-600">{project.notesFromMarketing}</p>
               </div>
             </>
           )}
@@ -226,33 +226,33 @@ export function ProjectDetail() {
             <div className="flex items-center gap-2 text-sm text-gray-500">
               <Users className="h-4 w-4" />
               <span>
-                {project.assignedMembers?.length || 0} / {project.teamComposition.reduce((sum, t) => sum + t.count, 0)}
+                {project.members?.length || 0} / {project.roleCompositions.reduce((sum, t) => sum + t.quantity, 0)}
               </span>
             </div>
           </div>
         </CardHeader>
         <CardContent>
-          {project.assignedMembers && project.assignedMembers.length > 0 ? (
+          {project.members && project.members.length > 0 ? (
             <div className="space-y-4">
-              {project.assignedMembers.map((member) => {
+              {project.members.map((member) => {
                 const employee = getEmployeeDetails(member.employeeId);
                 return (
                   <div key={member.id} className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="flex items-center gap-3">
                       <Avatar className="h-10 w-10">
                         <AvatarFallback>
-                          {employee ? getInitials(employee.name) : "??"}
+                          {employee ? getInitials(employee.fullName) : "??"}
                         </AvatarFallback>
                       </Avatar>
                       <div>
-                        <div className="font-medium">{employee?.name || "Unknown"}</div>
+                        <div className="font-medium">{employee?.fullName || "Unknown"}</div>
                         <div className="text-sm text-gray-500">{employee?.email || ""}</div>
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="font-medium">{member.role}</div>
+                      <div className="font-medium">{member.roleTitle}</div>
                       <Badge variant="outline" className="mt-1 capitalize">
-                        {member.seniority}
+                        {member.seniorityLevel}
                       </Badge>
                     </div>
                   </div>
@@ -263,7 +263,7 @@ export function ProjectDetail() {
             <div className="text-center py-8 text-gray-500">
               <Users className="h-12 w-12 mx-auto mb-2 text-gray-300" />
               <p>No team members assigned yet</p>
-              {user?.role === "gm" && project.status === "unassigned" && (
+              {user?.role === "GM" && project.status === "unassigned" && (
                 <Button
                   className="mt-4"
                   onClick={() => navigate(`/app/projects/${project.id}/assign`)}
@@ -283,14 +283,14 @@ export function ProjectDetail() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            {project.teamComposition.map((comp, index) => (
+            {project.roleCompositions.map((comp, index) => (
               <div key={index} className="p-4 border rounded-lg">
-                <div className="font-medium">{comp.role}</div>
+                <div className="font-medium">{comp.roleTitle}</div>
                 <div className="flex items-center justify-between mt-2">
                   <Badge variant="outline" className="capitalize">
-                    {comp.seniority}
+                    {comp.seniorityLevel}
                   </Badge>
-                  <span className="text-sm text-gray-500">×{comp.count}</span>
+                  <span className="text-sm text-gray-500">×{comp.quantity}</span>
                 </div>
               </div>
             ))}
@@ -299,7 +299,7 @@ export function ProjectDetail() {
       </Card>
 
       {/* Change Requests (if any) */}
-      {project.requestChanges && project.requestChanges.length > 0 && (user?.role === "gm" || isPM) && (
+      {project.requestChanges && project.requestChanges.length > 0 && (user?.role === "GM" || isPM) && (
         <ChangeRequestsSection
           requests={project.requestChanges}
           employees={employees}
@@ -311,7 +311,7 @@ export function ProjectDetail() {
             rejectChangeRequest(project.id, requestId);
             toast.error("Change request rejected");
           }}
-          canManage={user?.role === "gm"}
+          canManage={user?.role === "GM"}
         />
       )}
 

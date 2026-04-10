@@ -10,7 +10,7 @@ interface GanttChartProps {
 export function GanttChart({ projects }: GanttChartProps) {
   const { timeline, monthHeaders } = useMemo(() => {
     // Filter projects with dates
-    const projectsWithDates = projects.filter(p => p.startDate && p.endDate);
+    const projectsWithDates = projects.filter(p => p.actualStartDate && p.endDate);
     
     if (projectsWithDates.length === 0) {
       return { timeline: [], monthHeaders: [] };
@@ -18,7 +18,7 @@ export function GanttChart({ projects }: GanttChartProps) {
 
     // Find min and max dates
     const allDates = projectsWithDates.flatMap(p => [
-      new Date(p.startDate!),
+      new Date(p.actualStartDate!),
       new Date(p.endDate!),
     ]);
     const minDate = new Date(Math.min(...allDates.map(d => d.getTime())));
@@ -49,7 +49,7 @@ export function GanttChart({ projects }: GanttChartProps) {
 
     // Create timeline bars
     const timeline = projectsWithDates.map(project => {
-      const projectStart = new Date(project.startDate!);
+      const projectStart = new Date(project.actualStartDate!);
       const projectEnd = new Date(project.endDate!);
       
       const startOffset = Math.ceil((projectStart.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
@@ -135,7 +135,7 @@ export function GanttChart({ projects }: GanttChartProps) {
                         }}
                       >
                         <span className="text-xs text-white font-medium px-2 truncate">
-                          {project.duration}w
+                          {project.durationWeeks}w
                         </span>
                       </div>
                     </div>

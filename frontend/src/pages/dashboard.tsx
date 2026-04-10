@@ -31,8 +31,8 @@ export function Dashboard() {
     
     // Filter projects where the selected employee is either PM or team member
     return projects.filter(project => 
-      project.pmId === selectedEmployeeId || 
-      project.assignedMembers?.some(t => t.employeeId === selectedEmployeeId)
+      project.assignedPmId === selectedEmployeeId || 
+      project.members?.some(t => t.employeeId === selectedEmployeeId)
     );
   }, [projects, selectedEmployeeId]);
 
@@ -145,7 +145,7 @@ export function Dashboard() {
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div className="flex items-center gap-3">
               <CardTitle>
-                {selectedEmployee ? `Projects - ${selectedEmployee.name}` : "All Projects"}
+                {selectedEmployee ? `Projects - ${selectedEmployee.fullName}` : "All Projects"}
               </CardTitle>
               {selectedEmployee && (
                 <Button
@@ -197,23 +197,23 @@ export function Dashboard() {
                       <TableCell>{getStatusBadge(project.status)}</TableCell>
                       <TableCell>{getPriorityBadge(project.priority)}</TableCell>
                       <TableCell>
-                        {project.startDate || project.expectedStartDate || "-"}
+                        {project.actualStartDate || project.expectedStartDate || "-"}
                       </TableCell>
                       <TableCell>
                         {project.endDate || project.estimatedEndDate || "-"}
                       </TableCell>
-                      <TableCell>{project.duration}w</TableCell>
+                      <TableCell>{project.durationWeeks}w</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
                           <Users className="h-4 w-4 text-gray-400" />
                           <span>
-                            {project.assignedMembers?.length || 0}/
-                            {project.teamComposition.reduce((sum, t) => sum + t.count, 0)}
+                            {project.members?.length || 0}/
+                            {project.roleCompositions.reduce((sum, t) => sum + t.quantity, 0)}
                           </span>
                         </div>
                       </TableCell>
                       <TableCell className="text-gray-500">
-                        {project.lastUpdated}
+                        {project.updatedAt}
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
@@ -224,7 +224,7 @@ export function Dashboard() {
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
-                          {user?.role === "gm" && (
+                          {user?.role === "GM" && (
                             <Button
                               variant="ghost"
                               size="icon"

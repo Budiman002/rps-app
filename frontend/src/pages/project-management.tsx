@@ -25,11 +25,11 @@ export function ProjectManagement() {
 
   // Get PM's projects if user is PM
   const pmEmployee = employees.find(e => e.email === user?.email);
-  const myProjects = user?.role === "pm" 
-    ? projects.filter(p => p.pmId === pmEmployee?.id && p.status !== "unassigned")
+  const myProjects = user?.role === "PM" 
+    ? projects.filter(p => p.assignedPmId === pmEmployee?.id && p.status !== "unassigned")
     : [];
 
-  const allProjects = user?.role === "pm" ? myProjects : projects;
+  const allProjects = user?.role === "PM" ? myProjects : projects;
   const unassignedProjects = projects.filter(p => p.status === "unassigned");
 
   const filteredAllProjects = useMemo(() => {
@@ -72,19 +72,19 @@ export function ProjectManagement() {
       <TableCell>{project.clientName}</TableCell>
       <TableCell>{getStatusBadge(project.status)}</TableCell>
       <TableCell>
-        {project.startDate || project.expectedStartDate || "-"} - {project.endDate || project.estimatedEndDate || "-"}
+        {project.actualStartDate || project.expectedStartDate || "-"} - {project.endDate || project.estimatedEndDate || "-"}
       </TableCell>
-      <TableCell>{project.duration}w</TableCell>
+      <TableCell>{project.durationWeeks}w</TableCell>
       <TableCell>
         <div className="flex items-center gap-1">
           <Users className="h-4 w-4 text-gray-400" />
           <span>
-            {project.assignedMembers?.length || 0}/
-                            {project.teamComposition.reduce((sum, t) => sum + t.count, 0)}
+            {project.members?.length || 0}/
+                            {project.roleCompositions.reduce((sum, t) => sum + t.quantity, 0)}
           </span>
         </div>
       </TableCell>
-      {(user?.role === "gm" || user?.role === "marketing") && (
+      {(user?.role === "GM" || user?.role === "Marketing") && (
         <TableCell>
           {project.requestChanges && project.requestChanges.filter((r) => r.status === "pending").length > 0 ? (
             <Badge variant="outline" className="text-orange-600 border-orange-600">
@@ -97,7 +97,7 @@ export function ProjectManagement() {
       )}
       <TableCell className="text-right">
         <div className="flex justify-end gap-2">
-          {showAssignButton && user?.role === "gm" ? (
+          {showAssignButton && user?.role === "GM" ? (
             <Button
               size="sm"
               onClick={() => navigate(`/app/projects/${project.id}/assign`, { state: { from: '/app/projects' } })}
@@ -108,7 +108,7 @@ export function ProjectManagement() {
             </Button>
           ) : (
             <>
-              {user?.role === "pm" && (project.status === "scheduled" || project.status === "in-progress") && (
+              {user?.role === "PM" && (project.status === "scheduled" || project.status === "in-progress") && (
                 <Button
                   variant="ghost"
                   size="icon"
@@ -125,7 +125,7 @@ export function ProjectManagement() {
                   <FileEdit className="h-4 w-4 text-orange-600" />
                 </Button>
               )}
-              {user?.role === "gm" && (
+              {user?.role === "GM" && (
                 <Button
                   variant="ghost"
                   size="icon"
@@ -146,14 +146,14 @@ export function ProjectManagement() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold">
-            {user?.role === "pm" ? "My Projects" : "Project Management"}
+            {user?.role === "PM" ? "My Projects" : "Project Management"}
           </h1>
           <p className="text-gray-500 mt-1">
-            {user?.role === "pm" 
+            {user?.role === "PM" 
               ? "View and manage your assigned projects"
               : "Manage all projects and assignments"}
           </p>
-          {user?.role === "pm" && (
+          {user?.role === "PM" && (
             <div className="relative mt-4 w-full sm:w-80">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
@@ -166,7 +166,7 @@ export function ProjectManagement() {
             </div>
           )}
         </div>
-        {user?.role === "marketing" && (
+        {user?.role === "Marketing" && (
           <Button onClick={() => navigate("/app/projects/new")} className="gap-2">
             <Plus className="h-4 w-4" />
             Add Project
@@ -181,9 +181,9 @@ export function ProjectManagement() {
             <CardHeader>
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <CardTitle>
-                  {user?.role === "pm" ? "My Projects" : "All Projects"}
+                  {user?.role === "PM" ? "My Projects" : "All Projects"}
                 </CardTitle>
-                {user?.role !== "pm" && (
+                {user?.role !== "PM" && (
                   <div className="relative w-full sm:w-64">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input
@@ -208,7 +208,7 @@ export function ProjectManagement() {
                       <TableHead>Start - End Date</TableHead>
                       <TableHead>Duration</TableHead>
                       <TableHead>Team Members</TableHead>
-                      {(user?.role === "gm" || user?.role === "marketing") && (
+                      {(user?.role === "GM" || user?.role === "Marketing") && (
                         <TableHead>Requests</TableHead>
                       )}
                       <TableHead className="text-right">Actions</TableHead>
@@ -218,7 +218,7 @@ export function ProjectManagement() {
                     {filteredAllProjects.length === 0 ? (
                       <TableRow>
                         <TableCell 
-                          colSpan={user?.role === "pm" ? 7 : 8} 
+                          colSpan={user?.role === "PM" ? 7 : 8} 
                           className="text-center py-8 text-gray-500"
                         >
                           No projects found
@@ -234,7 +234,7 @@ export function ProjectManagement() {
           </Card>
         </TabsContent>
 
-        {user?.role === "gm" && (
+        {user?.role === "GM" && (
           <TabsContent value="unassigned" className="mt-6">
             <Card>
               <CardHeader>

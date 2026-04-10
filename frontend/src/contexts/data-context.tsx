@@ -6,7 +6,7 @@ import type {
   Priority,
   Project,
   Seniority,
-  TeamMember,
+  ProjectMember,
 } from "@/types/domain";
 
 export type {
@@ -16,15 +16,15 @@ export type {
   Priority,
   Project,
   Seniority,
-  TeamMember,
+  ProjectMember,
 } from "@/types/domain";
 
 interface DataContextType {
   projects: Project[];
   employees: Employee[];
-  addProject: (project: Omit<Project, "id" | "lastUpdated" | "status">) => void;
+  addProject: (project: Omit<Project, "id" | "updatedAt" | "status">) => void;
   updateProject: (id: string, updates: Partial<Project>) => void;
-  assignMembers: (projectId: string, members: TeamMember[], pmId: string) => void;
+  assignMembers: (projectId: string, members: ProjectMember[], pmId: string) => void;
   updateEmployee: (id: string, updates: Partial<Employee>) => void;
   addRequestChange: (projectId: string, title: string, description: string) => void;
   addDetailedRequestChange: (projectId: string, changeRequest: ChangeRequest) => void;
@@ -45,28 +45,29 @@ const mockProjects: Project[] = [
     clientName: "TechCorp Inc.",
     description: "Complete redesign of corporate website with modern UI/UX",
     expectedStartDate: "2026-04-15",
-    duration: 12,
+    durationWeeks: 12,
     estimatedEndDate: "2026-07-08",
-    startDate: "2026-04-15",
+    actualStartDate: "2026-04-15",
     endDate: "2026-07-08",
     priority: "high",
     status: "scheduled",
-    notes: "Client wants modern, minimalist design",
-    teamComposition: [
-      { role: "Project Manager", seniority: "senior", allocationType: "dedicated", count: 1 },
-      { role: "UI/UX Designer", seniority: "senior", allocationType: "dedicated", count: 1 },
-      { role: "Frontend Developer", seniority: "senior", allocationType: "dedicated", count: 2 },
-      { role: "Backend Developer", seniority: "junior", allocationType: "dedicated", count: 1 },
+    notesFromMarketing: "Client wants modern, minimalist design",
+    roleCompositions: [
+      { id: "RC001", roleTitle: "Project Manager", seniorityLevel: "senior", employmentStatus: "dedicated", quantity: 1 },
+      { id: "RC002", roleTitle: "UI/UX Designer", seniorityLevel: "senior", employmentStatus: "dedicated", quantity: 1 },
+      { id: "RC003", roleTitle: "Frontend Developer", seniorityLevel: "senior", employmentStatus: "dedicated", quantity: 2 },
+      { id: "RC004", roleTitle: "Backend Developer", seniorityLevel: "junior", employmentStatus: "dedicated", quantity: 1 },
     ],
-    assignedMembers: [
-      { id: "TM001", employeeId: "E001", role: "Project Manager", seniority: "senior" },
-      { id: "TM002", employeeId: "E002", role: "UI/UX Designer", seniority: "senior" },
-      { id: "TM003", employeeId: "E003", role: "Frontend Developer", seniority: "senior" },
-      { id: "TM004", employeeId: "E004", role: "Frontend Developer", seniority: "senior" },
-      { id: "TM005", employeeId: "E005", role: "Backend Developer", seniority: "junior" },
+    members: [
+      { id: "TM001", employeeId: "E001", fullName: "Sarah Johnson", email: "sarah.johnson@company.com", jobTitle: "Project Manager", seniorityLevel: "senior", roleCompositionId: "RC001", roleTitle: "Project Manager" },
+      { id: "TM002", employeeId: "E002", fullName: "Michael Chen", email: "michael.chen@company.com", jobTitle: "UI/UX Designer", seniorityLevel: "senior", roleCompositionId: "RC002", roleTitle: "UI/UX Designer" },
+      { id: "TM003", employeeId: "E003", fullName: "Emily Rodriguez", email: "emily.rodriguez@company.com", jobTitle: "Frontend Developer", seniorityLevel: "senior", roleCompositionId: "RC003", roleTitle: "Frontend Developer" },
+      { id: "TM004", employeeId: "E004", fullName: "David Kim", email: "david.kim@company.com", jobTitle: "Frontend Developer", seniorityLevel: "senior", roleCompositionId: "RC003", roleTitle: "Frontend Developer" },
+      { id: "TM005", employeeId: "E005", fullName: "Jessica Martinez", email: "jessica.martinez@company.com", jobTitle: "Backend Developer", seniorityLevel: "junior", roleCompositionId: "RC004", roleTitle: "Backend Developer" },
     ],
-    pmId: "E001",
-    lastUpdated: "2026-04-02",
+    assignedPmId: "E001",
+    createdAt: "2026-04-01",
+    updatedAt: "2026-04-02",
   },
   {
     id: "P002",
@@ -74,30 +75,31 @@ const mockProjects: Project[] = [
     clientName: "FinanceHub",
     description: "Native mobile application for financial management",
     expectedStartDate: "2026-05-01",
-    duration: 16,
+    durationWeeks: 16,
     estimatedEndDate: "2026-08-20",
-    startDate: "2026-05-01",
+    actualStartDate: "2026-05-01",
     endDate: "2026-08-20",
     priority: "critical",
     status: "scheduled",
-    notes: "iOS and Android platforms required",
-    teamComposition: [
-      { role: "Project Manager", seniority: "senior", allocationType: "dedicated", count: 1 },
-      { role: "UI/UX Designer", seniority: "senior", allocationType: "dedicated", count: 1 },
-      { role: "Mobile Developer", seniority: "senior", allocationType: "dedicated", count: 2 },
-      { role: "Backend Developer", seniority: "senior", allocationType: "dedicated", count: 1 },
-      { role: "QA Engineer", seniority: "junior", allocationType: "parallel", count: 1 },
+    notesFromMarketing: "iOS and Android platforms required",
+    roleCompositions: [
+      { id: "RC005", roleTitle: "Project Manager", seniorityLevel: "senior", employmentStatus: "dedicated", quantity: 1 },
+      { id: "RC006", roleTitle: "UI/UX Designer", seniorityLevel: "senior", employmentStatus: "dedicated", quantity: 1 },
+      { id: "RC007", roleTitle: "Mobile Developer", seniorityLevel: "senior", employmentStatus: "dedicated", quantity: 2 },
+      { id: "RC008", roleTitle: "Backend Developer", seniorityLevel: "senior", employmentStatus: "dedicated", quantity: 1 },
+      { id: "RC009", roleTitle: "QA Engineer", seniorityLevel: "junior", employmentStatus: "parallel", quantity: 1 },
     ],
-    assignedMembers: [
-      { id: "TM006", employeeId: "E006", role: "Project Manager", seniority: "senior" },
-      { id: "TM007", employeeId: "E007", role: "UI/UX Designer", seniority: "senior" },
-      { id: "TM008", employeeId: "E008", role: "Mobile Developer", seniority: "senior" },
-      { id: "TM009", employeeId: "E009", role: "Mobile Developer", seniority: "senior" },
-      { id: "TM010", employeeId: "E010", role: "Backend Developer", seniority: "senior" },
-      { id: "TM011", employeeId: "E011", role: "QA Engineer", seniority: "junior" },
+    members: [
+      { id: "TM006", employeeId: "E006", fullName: "Robert Taylor", email: "robert.taylor@company.com", jobTitle: "Project Manager", seniorityLevel: "senior", roleCompositionId: "RC005", roleTitle: "Project Manager" },
+      { id: "TM007", employeeId: "E007", fullName: "Amanda Lee", email: "amanda.lee@company.com", jobTitle: "UI/UX Designer", seniorityLevel: "senior", roleCompositionId: "RC006", roleTitle: "UI/UX Designer" },
+      { id: "TM008", employeeId: "E008", fullName: "Christopher Brown", email: "christopher.brown@company.com", jobTitle: "Mobile Developer", seniorityLevel: "senior", roleCompositionId: "RC007", roleTitle: "Mobile Developer" },
+      { id: "TM009", employeeId: "E009", fullName: "Jennifer Wilson", email: "jennifer.wilson@company.com", jobTitle: "Mobile Developer", seniorityLevel: "senior", roleCompositionId: "RC007", roleTitle: "Mobile Developer" },
+      { id: "TM010", employeeId: "E010", fullName: "Daniel Garcia", email: "daniel.garcia@company.com", jobTitle: "Backend Developer", seniorityLevel: "senior", roleCompositionId: "RC008", roleTitle: "Backend Developer" },
+      { id: "TM011", employeeId: "E011", fullName: "Lisa Anderson", email: "lisa.anderson@company.com", jobTitle: "QA Engineer", seniorityLevel: "junior", roleCompositionId: "RC009", roleTitle: "QA Engineer" },
     ],
-    pmId: "E006",
-    lastUpdated: "2026-04-01",
+    assignedPmId: "E006",
+    createdAt: "2026-04-01",
+    updatedAt: "2026-04-01",
   },
   {
     id: "P003",
@@ -105,30 +107,31 @@ const mockProjects: Project[] = [
     clientName: "RetailMax",
     description: "Full-featured e-commerce platform with inventory management",
     expectedStartDate: "2026-04-20",
-    duration: 8,
+    durationWeeks: 8,
     estimatedEndDate: "2026-06-15",
-    startDate: "2026-04-20",
+    actualStartDate: "2026-04-20",
     endDate: "2026-06-15",
     priority: "medium",
     status: "scheduled",
-    notes: "Integration with existing ERP system required",
-    teamComposition: [
-      { role: "Project Manager", seniority: "senior", allocationType: "dedicated", count: 1 },
-      { role: "UI/UX Designer", seniority: "junior", allocationType: "parallel", count: 1 },
-      { role: "Frontend Developer", seniority: "senior", allocationType: "dedicated", count: 1 },
-      { role: "Backend Developer", seniority: "senior", allocationType: "dedicated", count: 2 },
-      { role: "QA Engineer", seniority: "junior", allocationType: "parallel", count: 1 },
+    notesFromMarketing: "Integration with existing ERP system required",
+    roleCompositions: [
+      { id: "RC010", roleTitle: "Project Manager", seniorityLevel: "senior", employmentStatus: "dedicated", quantity: 1 },
+      { id: "RC011", roleTitle: "UI/UX Designer", seniorityLevel: "junior", employmentStatus: "parallel", quantity: 1 },
+      { id: "RC012", roleTitle: "Frontend Developer", seniorityLevel: "senior", employmentStatus: "dedicated", quantity: 1 },
+      { id: "RC013", roleTitle: "Backend Developer", seniorityLevel: "senior", employmentStatus: "dedicated", quantity: 2 },
+      { id: "RC014", roleTitle: "QA Engineer", seniorityLevel: "junior", employmentStatus: "parallel", quantity: 1 },
     ],
-    assignedMembers: [
-      { id: "TM017", employeeId: "E019", role: "Project Manager", seniority: "senior" },
-      { id: "TM018", employeeId: "E002", role: "UI/UX Designer", seniority: "junior" },
-      { id: "TM019", employeeId: "E003", role: "Frontend Developer", seniority: "senior" },
-      { id: "TM020", employeeId: "E005", role: "Backend Developer", seniority: "senior" },
-      { id: "TM021", employeeId: "E017", role: "Backend Developer", seniority: "senior" },
-      { id: "TM022", employeeId: "E018", role: "QA Engineer", seniority: "junior" },
+    members: [
+      { id: "TM017", employeeId: "E019", fullName: "Jordan Smith", email: "jordan.smith@company.com", jobTitle: "Project Manager", seniorityLevel: "senior", roleCompositionId: "RC010", roleTitle: "Project Manager" },
+      { id: "TM018", employeeId: "E002", fullName: "Michael Chen", email: "michael.chen@company.com", jobTitle: "UI/UX Designer", seniorityLevel: "junior", roleCompositionId: "RC011", roleTitle: "UI/UX Designer" },
+      { id: "TM019", employeeId: "E003", fullName: "Emily Rodriguez", email: "emily.rodriguez@company.com", jobTitle: "Frontend Developer", seniorityLevel: "senior", roleCompositionId: "RC012", roleTitle: "Frontend Developer" },
+      { id: "TM020", employeeId: "E005", fullName: "Jessica Martinez", email: "jessica.martinez@company.com", jobTitle: "Backend Developer", seniorityLevel: "senior", roleCompositionId: "RC013", roleTitle: "Backend Developer" },
+      { id: "TM021", employeeId: "E017", fullName: "Sandra Moore", email: "sandra.moore@company.com", jobTitle: "Backend Developer", seniorityLevel: "senior", roleCompositionId: "RC013", roleTitle: "Backend Developer" },
+      { id: "TM022", employeeId: "E018", fullName: "Kevin Johnson", email: "kevin.johnson@company.com", jobTitle: "QA Engineer", seniorityLevel: "junior", roleCompositionId: "RC014", roleTitle: "QA Engineer" },
     ],
-    pmId: "E019",
-    lastUpdated: "2026-04-02",
+    assignedPmId: "E019",
+    createdAt: "2026-04-01",
+    updatedAt: "2026-04-02",
   },
   {
     id: "P004",
@@ -136,28 +139,29 @@ const mockProjects: Project[] = [
     clientName: "DataInsights Co.",
     description: "Real-time analytics dashboard with data visualization",
     expectedStartDate: "2026-06-01",
-    duration: 10,
+    durationWeeks: 10,
     estimatedEndDate: "2026-08-10",
-    startDate: "2026-06-01",
+    actualStartDate: "2026-06-01",
     endDate: "2026-08-10",
     priority: "high",
     status: "scheduled",
-    notes: "Big data processing capabilities needed",
-    teamComposition: [
-      { role: "Project Manager", seniority: "senior", allocationType: "dedicated", count: 1 },
-      { role: "Data Engineer", seniority: "senior", allocationType: "dedicated", count: 2 },
-      { role: "Frontend Developer", seniority: "senior", allocationType: "dedicated", count: 1 },
-      { role: "Backend Developer", seniority: "senior", allocationType: "dedicated", count: 1 },
+    notesFromMarketing: "Big data processing capabilities needed",
+    roleCompositions: [
+      { id: "RC015", roleTitle: "Project Manager", seniorityLevel: "senior", employmentStatus: "dedicated", quantity: 1 },
+      { id: "RC016", roleTitle: "Data Engineer", seniorityLevel: "senior", employmentStatus: "dedicated", quantity: 2 },
+      { id: "RC017", roleTitle: "Frontend Developer", seniorityLevel: "senior", employmentStatus: "dedicated", quantity: 1 },
+      { id: "RC018", roleTitle: "Backend Developer", seniorityLevel: "senior", employmentStatus: "dedicated", quantity: 1 },
     ],
-    assignedMembers: [
-      { id: "TM012", employeeId: "E001", role: "Project Manager", seniority: "senior" },
-      { id: "TM013", employeeId: "E012", role: "Data Engineer", seniority: "senior" },
-      { id: "TM014", employeeId: "E013", role: "Data Engineer", seniority: "senior" },
-      { id: "TM015", employeeId: "E014", role: "Frontend Developer", seniority: "senior" },
-      { id: "TM016", employeeId: "E015", role: "Backend Developer", seniority: "senior" },
+    members: [
+      { id: "TM012", employeeId: "E001", fullName: "Sarah Johnson", email: "sarah.johnson@company.com", jobTitle: "Project Manager", seniorityLevel: "senior", roleCompositionId: "RC015", roleTitle: "Project Manager" },
+      { id: "TM013", employeeId: "E012", fullName: "James Thompson", email: "james.thompson@company.com", jobTitle: "Data Engineer", seniorityLevel: "senior", roleCompositionId: "RC016", roleTitle: "Data Engineer" },
+      { id: "TM014", employeeId: "E013", fullName: "Karen White", email: "karen.white@company.com", jobTitle: "Data Engineer", seniorityLevel: "senior", roleCompositionId: "RC016", roleTitle: "Data Engineer" },
+      { id: "TM015", employeeId: "E014", fullName: "Thomas Miller", email: "thomas.miller@company.com", jobTitle: "Frontend Developer", seniorityLevel: "senior", roleCompositionId: "RC017", roleTitle: "Frontend Developer" },
+      { id: "TM016", employeeId: "E015", fullName: "Nancy Davis", email: "nancy.davis@company.com", jobTitle: "Backend Developer", seniorityLevel: "senior", roleCompositionId: "RC018", roleTitle: "Backend Developer" },
     ],
-    pmId: "E001",
-    lastUpdated: "2026-03-30",
+    assignedPmId: "E001",
+    createdAt: "2026-03-30",
+    updatedAt: "2026-03-30",
   },
   {
     id: "P005",
@@ -165,18 +169,20 @@ const mockProjects: Project[] = [
     clientName: "SalesPro Ltd.",
     description: "Customer relationship management system with automation",
     expectedStartDate: "2026-05-15",
-    duration: 6,
+    durationWeeks: 6,
     estimatedEndDate: "2026-06-26",
     priority: "low",
     status: "unassigned",
-    notes: "Email integration and reporting features",
-    teamComposition: [
-      { role: "Project Manager", seniority: "junior", allocationType: "dedicated", count: 1 },
-      { role: "Frontend Developer", seniority: "senior", allocationType: "parallel", count: 1 },
-      { role: "Backend Developer", seniority: "senior", allocationType: "dedicated", count: 1 },
-      { role: "QA Engineer", seniority: "junior", allocationType: "parallel", count: 1 },
+    notesFromMarketing: "Email integration and reporting features",
+    roleCompositions: [
+      { id: "RC019", roleTitle: "Project Manager", seniorityLevel: "junior", employmentStatus: "dedicated", quantity: 1 },
+      { id: "RC020", roleTitle: "Frontend Developer", seniorityLevel: "senior", employmentStatus: "parallel", quantity: 1 },
+      { id: "RC021", roleTitle: "Backend Developer", seniorityLevel: "senior", employmentStatus: "dedicated", quantity: 1 },
+      { id: "RC022", roleTitle: "QA Engineer", seniorityLevel: "junior", employmentStatus: "parallel", quantity: 1 },
     ],
-    lastUpdated: "2026-04-01",
+    members: [],
+    createdAt: "2026-04-01",
+    updatedAt: "2026-04-01",
   },
   {
     id: "P006",
@@ -184,310 +190,333 @@ const mockProjects: Project[] = [
     clientName: "BrandCo",
     description: "Internal marketing resource management portal",
     expectedStartDate: "2026-03-15",
-    duration: 8,
     estimatedEndDate: "2026-05-10",
-    startDate: "2026-03-15",
+    actualStartDate: "2026-03-15",
     endDate: "2026-05-10",
+    durationWeeks: 8,
     priority: "medium",
     status: "in-progress",
-    notes: "Integration with existing CMS required",
-    teamComposition: [
-      { role: "Project Manager", seniority: "senior", allocationType: "dedicated", count: 1 },
-      { role: "Frontend Developer", seniority: "senior", allocationType: "dedicated", count: 2 },
-      { role: "Backend Developer", seniority: "junior", allocationType: "parallel", count: 1 },
+    notesFromMarketing: "Integration with existing CMS required",
+    roleCompositions: [
+      { id: "RC023", roleTitle: "Project Manager", seniorityLevel: "senior", employmentStatus: "dedicated", quantity: 1 },
+      { id: "RC024", roleTitle: "Frontend Developer", seniorityLevel: "senior", employmentStatus: "dedicated", quantity: 2 },
+      { id: "RC025", roleTitle: "Backend Developer", seniorityLevel: "junior", employmentStatus: "parallel", quantity: 1 },
     ],
-    assignedMembers: [
-      { id: "TM023", employeeId: "E006", role: "Project Manager", seniority: "senior" },
-      { id: "TM024", employeeId: "E014", role: "Frontend Developer", seniority: "senior" },
-      { id: "TM025", employeeId: "E016", role: "Frontend Developer", seniority: "junior" },
-      { id: "TM026", employeeId: "E017", role: "Backend Developer", seniority: "junior" },
+    members: [
+      { id: "TM023", employeeId: "E006", fullName: "Robert Taylor", email: "robert.taylor@company.com", jobTitle: "Project Manager", seniorityLevel: "senior", roleCompositionId: "RC023", roleTitle: "Project Manager" },
+      { id: "TM024", employeeId: "E014", fullName: "Thomas Miller", email: "thomas.miller@company.com", jobTitle: "Frontend Developer", seniorityLevel: "senior", roleCompositionId: "RC024", roleTitle: "Frontend Developer" },
+      { id: "TM025", employeeId: "E016", fullName: "Paul Martinez", email: "paul.martinez@company.com", jobTitle: "Frontend Developer", seniorityLevel: "junior", roleCompositionId: "RC024", roleTitle: "Frontend Developer" },
+      { id: "TM026", employeeId: "E017", fullName: "Sandra Moore", email: "sandra.moore@company.com", jobTitle: "Backend Developer", seniorityLevel: "junior", roleCompositionId: "RC025", roleTitle: "Backend Developer" },
     ],
-    pmId: "E006",
-    lastUpdated: "2026-04-05",
+    assignedPmId: "E006",
+    createdAt: "2026-04-01",
+    updatedAt: "2026-04-05",
   },
   {
     id: "P007",
-    name: "Client Onboarding System",
-    clientName: "ServiceNow Inc.",
-    description: "Automated client onboarding and document management system",
+    name: "HR Management System",
+    clientName: "HR Solutions Inc.",
+    description: "Comprehensive HR management system with employee records and payroll integration",
     expectedStartDate: "2026-01-10",
-    duration: 10,
     estimatedEndDate: "2026-03-21",
-    startDate: "2026-01-10",
+    actualStartDate: "2026-01-10",
     endDate: "2026-03-21",
+    durationWeeks: 10,
     priority: "high",
     status: "completed",
-    notes: "Successfully delivered ahead of schedule",
-    teamComposition: [
-      { role: "Project Manager", seniority: "senior", allocationType: "dedicated", count: 1 },
-      { role: "UI/UX Designer", seniority: "senior", allocationType: "parallel", count: 1 },
-      { role: "Frontend Developer", seniority: "senior", allocationType: "dedicated", count: 1 },
-      { role: "Backend Developer", seniority: "senior", allocationType: "dedicated", count: 2 },
-      { role: "QA Engineer", seniority: "senior", allocationType: "parallel", count: 1 },
+    notesFromMarketing: "Successfully delivered ahead of schedule",
+    roleCompositions: [
+      { id: "RC026", roleTitle: "Project Manager", seniorityLevel: "senior", employmentStatus: "dedicated", quantity: 1 },
+      { id: "RC027", roleTitle: "UI/UX Designer", seniorityLevel: "senior", employmentStatus: "parallel", quantity: 1 },
+      { id: "RC028", roleTitle: "Frontend Developer", seniorityLevel: "senior", employmentStatus: "dedicated", quantity: 1 },
+      { id: "RC029", roleTitle: "Backend Developer", seniorityLevel: "senior", employmentStatus: "dedicated", quantity: 2 },
+      { id: "RC030", roleTitle: "QA Engineer", seniorityLevel: "senior", employmentStatus: "parallel", quantity: 1 },
     ],
-    assignedMembers: [
-      { id: "TM027", employeeId: "E019", role: "Project Manager", seniority: "senior" },
-      { id: "TM028", employeeId: "E007", role: "UI/UX Designer", seniority: "senior" },
-      { id: "TM029", employeeId: "E003", role: "Frontend Developer", seniority: "senior" },
-      { id: "TM030", employeeId: "E010", role: "Backend Developer", seniority: "senior" },
-      { id: "TM031", employeeId: "E015", role: "Backend Developer", seniority: "senior" },
-      { id: "TM032", employeeId: "E011", role: "QA Engineer", seniority: "junior" },
+    members: [
+      { id: "TM027", employeeId: "E019", fullName: "Jordan Smith", email: "jordan.smith@company.com", jobTitle: "Project Manager", seniorityLevel: "senior", roleCompositionId: "RC026", roleTitle: "Project Manager" },
+      { id: "TM028", employeeId: "E007", fullName: "Amanda Lee", email: "amanda.lee@company.com", jobTitle: "UI/UX Designer", seniorityLevel: "senior", roleCompositionId: "RC027", roleTitle: "UI/UX Designer" },
+      { id: "TM029", employeeId: "E003", fullName: "Emily Rodriguez", email: "emily.rodriguez@company.com", jobTitle: "Frontend Developer", seniorityLevel: "senior", roleCompositionId: "RC028", roleTitle: "Frontend Developer" },
+      { id: "TM030", employeeId: "E010", fullName: "Daniel Garcia", email: "daniel.garcia@company.com", jobTitle: "Backend Developer", seniorityLevel: "senior", roleCompositionId: "RC029", roleTitle: "Backend Developer" },
+      { id: "TM031", employeeId: "E015", fullName: "Nancy Davis", email: "nancy.davis@company.com", jobTitle: "Backend Developer", seniorityLevel: "senior", roleCompositionId: "RC029", roleTitle: "Backend Developer" },
+      { id: "TM032", employeeId: "E011", fullName: "Lisa Anderson", email: "lisa.anderson@company.com", jobTitle: "QA Engineer", seniorityLevel: "junior", roleCompositionId: "RC030", roleTitle: "QA Engineer" },
     ],
-    pmId: "E019",
-    lastUpdated: "2026-03-21",
+    assignedPmId: "E019",
+    createdAt: "2026-01-10",
+    updatedAt: "2026-03-21",
   },
 ];
 
 const mockEmployees: Employee[] = [
   {
     id: "E001",
-    name: "Sarah Johnson",
+    fullName: "Sarah Johnson",
     email: "sarah.johnson@company.com",
-    dob: "1988-05-15",
-    role: "Project Manager",
-    seniority: "senior",
+    jobTitle: "Project Manager",
+    seniorityLevel: "senior",
+    yearsOfExperience: 12,
     contractType: "permanent",
-    contractStartDate: "2020-01-10",
     isDedicated: true,
     currentProject: "Website Redesign",
+    createdAt: "2020-01-10",
+    updatedAt: "2020-01-10",
   },
   {
     id: "E002",
-    name: "Michael Chen",
+    fullName: "Michael Chen",
     email: "michael.chen@company.com",
-    dob: "1990-08-22",
-    role: "UI/UX Designer",
-    seniority: "senior",
+    jobTitle: "UI/UX Designer",
+    seniorityLevel: "senior",
+    yearsOfExperience: 10,
     contractType: "permanent",
-    contractStartDate: "2019-03-15",
     isDedicated: true,
     currentProject: "Website Redesign",
+    createdAt: "2019-03-15",
+    updatedAt: "2019-03-15",
   },
   {
     id: "E003",
-    name: "Emily Rodriguez",
+    fullName: "Emily Rodriguez",
     email: "emily.rodriguez@company.com",
-    dob: "1992-11-30",
-    role: "Frontend Developer",
-    seniority: "senior",
+    jobTitle: "Frontend Developer",
+    seniorityLevel: "senior",
+    yearsOfExperience: 8,
     contractType: "permanent",
-    contractStartDate: "2021-06-01",
     isDedicated: true,
     currentProject: "Website Redesign",
+    createdAt: "2021-06-01",
+    updatedAt: "2021-06-01",
   },
   {
     id: "E004",
-    name: "David Kim",
+    fullName: "David Kim",
     email: "david.kim@company.com",
-    dob: "1991-03-18",
-    role: "Frontend Developer",
-    seniority: "senior",
+    jobTitle: "Frontend Developer",
+    seniorityLevel: "senior",
+    yearsOfExperience: 7,
     contractType: "contract",
-    contractStartDate: "2025-01-15",
     contractEndDate: "2026-06-30",
     isDedicated: false,
     currentProject: "Website Redesign",
+    createdAt: "2025-01-15",
+    updatedAt: "2025-01-15",
   },
   {
     id: "E005",
-    name: "Jessica Martinez",
+    fullName: "Jessica Martinez",
     email: "jessica.martinez@company.com",
-    dob: "1995-07-09",
-    role: "Backend Developer",
-    seniority: "junior",
+    jobTitle: "Backend Developer",
+    seniorityLevel: "junior",
+    yearsOfExperience: 3,
     contractType: "permanent",
-    contractStartDate: "2023-09-01",
     isDedicated: true,
     currentProject: "Website Redesign",
+    createdAt: "2023-09-01",
+    updatedAt: "2023-09-01",
   },
   {
     id: "E006",
-    name: "Robert Taylor",
+    fullName: "Robert Taylor",
     email: "robert.taylor@company.com",
-    dob: "1987-12-05",
-    role: "Project Manager",
-    seniority: "senior",
+    jobTitle: "Project Manager",
+    seniorityLevel: "senior",
+    yearsOfExperience: 15,
     contractType: "permanent",
-    contractStartDate: "2018-04-20",
     isDedicated: true,
     currentProject: "Mobile App Development",
+    createdAt: "2018-04-20",
+    updatedAt: "2018-04-20",
   },
   {
     id: "E007",
-    name: "Amanda Lee",
+    fullName: "Amanda Lee",
     email: "amanda.lee@company.com",
-    dob: "1993-09-14",
-    role: "UI/UX Designer",
-    seniority: "senior",
+    jobTitle: "UI/UX Designer",
+    seniorityLevel: "senior",
+    yearsOfExperience: 9,
     contractType: "permanent",
-    contractStartDate: "2020-11-01",
     isDedicated: true,
     currentProject: "Mobile App Development",
+    createdAt: "2020-11-01",
+    updatedAt: "2020-11-01",
   },
   {
     id: "E008",
-    name: "Christopher Brown",
+    fullName: "Christopher Brown",
     email: "christopher.brown@company.com",
-    dob: "1989-06-25",
-    role: "Mobile Developer",
-    seniority: "senior",
+    jobTitle: "Mobile Developer",
+    seniorityLevel: "senior",
+    yearsOfExperience: 11,
     contractType: "permanent",
-    contractStartDate: "2019-08-15",
     isDedicated: true,
     currentProject: "Mobile App Development",
+    createdAt: "2019-08-15",
+    updatedAt: "2019-08-15",
   },
   {
     id: "E009",
-    name: "Jennifer Wilson",
+    fullName: "Jennifer Wilson",
     email: "jennifer.wilson@company.com",
-    dob: "1994-02-11",
-    role: "Mobile Developer",
-    seniority: "senior",
+    jobTitle: "Mobile Developer",
+    seniorityLevel: "senior",
+    yearsOfExperience: 6,
     contractType: "contract",
-    contractStartDate: "2025-03-01",
     contractEndDate: "2026-08-31",
     isDedicated: false,
     currentProject: "Mobile App Development",
+    createdAt: "2025-03-01",
+    updatedAt: "2025-03-01",
   },
   {
     id: "E010",
-    name: "Daniel Garcia",
+    fullName: "Daniel Garcia",
     email: "daniel.garcia@company.com",
-    dob: "1990-10-28",
-    role: "Backend Developer",
-    seniority: "senior",
+    jobTitle: "Backend Developer",
+    seniorityLevel: "senior",
+    yearsOfExperience: 10,
     contractType: "permanent",
-    contractStartDate: "2020-02-10",
     isDedicated: true,
     currentProject: "Mobile App Development",
+    createdAt: "2020-02-10",
+    updatedAt: "2020-02-10",
   },
   {
     id: "E011",
-    name: "Lisa Anderson",
+    fullName: "Lisa Anderson",
     email: "lisa.anderson@company.com",
-    dob: "1996-04-17",
-    role: "QA Engineer",
-    seniority: "junior",
+    jobTitle: "QA Engineer",
+    seniorityLevel: "junior",
+    yearsOfExperience: 2,
     contractType: "permanent",
-    contractStartDate: "2024-01-08",
     isDedicated: true,
     currentProject: "Mobile App Development",
+    createdAt: "2024-01-08",
+    updatedAt: "2024-01-08",
   },
   {
     id: "E012",
-    name: "James Thompson",
+    fullName: "James Thompson",
     email: "james.thompson@company.com",
-    dob: "1988-11-03",
-    role: "Data Engineer",
-    seniority: "senior",
+    jobTitle: "Data Engineer",
+    seniorityLevel: "senior",
+    yearsOfExperience: 11,
     contractType: "permanent",
-    contractStartDate: "2019-05-20",
     isDedicated: true,
     currentProject: "Data Analytics Dashboard",
+    createdAt: "2019-05-20",
+    updatedAt: "2019-05-20",
   },
   {
     id: "E013",
-    name: "Karen White",
+    fullName: "Karen White",
     email: "karen.white@company.com",
-    dob: "1991-08-19",
-    role: "Data Engineer",
-    seniority: "senior",
+    jobTitle: "Data Engineer",
+    seniorityLevel: "senior",
+    yearsOfExperience: 9,
     contractType: "permanent",
-    contractStartDate: "2021-03-15",
     isDedicated: true,
     currentProject: "Data Analytics Dashboard",
+    createdAt: "2021-03-15",
+    updatedAt: "2021-03-15",
   },
   {
     id: "E014",
-    name: "Thomas Miller",
+    fullName: "Thomas Miller",
     email: "thomas.miller@company.com",
-    dob: "1993-01-26",
-    role: "Frontend Developer",
-    seniority: "senior",
+    jobTitle: "Frontend Developer",
+    seniorityLevel: "senior",
+    yearsOfExperience: 8,
     contractType: "permanent",
-    contractStartDate: "2022-07-01",
     isDedicated: false,
     currentProject: "Data Analytics Dashboard",
+    createdAt: "2022-07-01",
+    updatedAt: "2022-07-01",
   },
   {
     id: "E015",
-    name: "Nancy Davis",
+    fullName: "Nancy Davis",
     email: "nancy.davis@company.com",
-    dob: "1992-05-08",
-    role: "Backend Developer",
-    seniority: "senior",
+    jobTitle: "Backend Developer",
+    seniorityLevel: "senior",
+    yearsOfExperience: 10,
     contractType: "contract",
-    contractStartDate: "2025-06-01",
     contractEndDate: "2026-12-31",
     isDedicated: false,
     currentProject: "Data Analytics Dashboard",
+    createdAt: "2025-06-01",
+    updatedAt: "2025-06-01",
   },
   {
     id: "E016",
-    name: "Paul Martinez",
+    fullName: "Paul Martinez",
     email: "paul.martinez@company.com",
-    dob: "1994-09-21",
-    role: "Frontend Developer",
-    seniority: "junior",
+    jobTitle: "Frontend Developer",
+    seniorityLevel: "junior",
+    yearsOfExperience: 3,
     contractType: "permanent",
-    contractStartDate: "2023-11-01",
     isDedicated: false,
+    createdAt: "2023-11-01",
+    updatedAt: "2023-11-01",
   },
   {
     id: "E017",
-    name: "Sandra Moore",
+    fullName: "Sandra Moore",
     email: "sandra.moore@company.com",
-    dob: "1995-12-30",
-    role: "Backend Developer",
-    seniority: "junior",
+    jobTitle: "Backend Developer",
+    seniorityLevel: "junior",
+    yearsOfExperience: 2,
     contractType: "permanent",
-    contractStartDate: "2024-02-15",
     isDedicated: false,
+    createdAt: "2024-02-15",
+    updatedAt: "2024-02-15",
   },
   {
     id: "E018",
-    name: "Kevin Johnson",
+    fullName: "Kevin Johnson",
     email: "kevin.johnson@company.com",
-    dob: "1997-03-14",
-    role: "QA Engineer",
-    seniority: "junior",
+    jobTitle: "QA Engineer",
+    seniorityLevel: "junior",
+    yearsOfExperience: 1,
     contractType: "permanent",
-    contractStartDate: "2024-06-01",
     isDedicated: false,
+    createdAt: "2025-01-10",
+    updatedAt: "2025-01-10",
   },
   {
     id: "E019",
-    name: "Project Manager",
-    email: "pm@rps.com",
-    dob: "1986-04-10",
-    role: "Project Manager",
-    seniority: "senior",
+    fullName: "Jordan Smith",
+    email: "jordan.smith@company.com",
+    jobTitle: "Project Manager",
+    seniorityLevel: "senior",
+    yearsOfExperience: 14,
     contractType: "permanent",
-    contractStartDate: "2017-08-01",
     isDedicated: true,
-    currentProject: "E-commerce Platform",
+    currentProject: "Client Onboarding System",
+    createdAt: "2017-09-01",
+    updatedAt: "2017-09-01",
   },
   {
     id: "E020",
-    name: "Alex Thompson",
+    fullName: "Alex Thompson",
     email: "alex.thompson@company.com",
-    dob: "1996-03-22",
-    role: "Project Manager",
-    seniority: "junior",
+    jobTitle: "Project Manager",
+    seniorityLevel: "junior",
+    yearsOfExperience: 4,
     contractType: "permanent",
-    contractStartDate: "2024-02-15",
     isDedicated: false,
+    createdAt: "2024-02-15",
+    updatedAt: "2024-02-15",
   },
   {
     id: "E021",
-    name: "Jordan Smith",
-    email: "jordan.smith@company.com",
-    dob: "1997-09-08",
-    role: "Project Manager",
-    seniority: "junior",
+    fullName: "Jordan Lee",
+    email: "jordan.lee@company.com",
+    jobTitle: "Project Manager",
+    seniorityLevel: "junior",
+    yearsOfExperience: 1,
     contractType: "permanent",
-    contractStartDate: "2025-01-10",
     isDedicated: false,
+    createdAt: "2025-01-10",
+    updatedAt: "2025-01-10",
   },
 ];
 
@@ -495,45 +524,62 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [projects, setProjects] = useState<Project[]>(mockProjects);
   const [employees, setEmployees] = useState<Employee[]>(mockEmployees);
 
-  const addProject = (project: Omit<Project, "id" | "lastUpdated" | "status">) => {
+  const addProject = (project: Omit<Project, "id" | "updatedAt" | "status">) => {
     const newProject: Project = {
       ...project,
       id: `P${String(projects.length + 1).padStart(3, "0")}`,
       status: "unassigned",
-      lastUpdated: new Date().toISOString().split("T")[0],
+      updatedAt: new Date().toISOString().substring(0, 10),
     };
     setProjects([...projects, newProject]);
   };
 
   const updateProject = (id: string, updates: Partial<Project>) => {
-    setProjects(projects.map(p => 
-      p.id === id 
-        ? { ...p, ...updates, lastUpdated: new Date().toISOString().split("T")[0] }
-        : p
-    ));
+    setProjects(projects.map(p => {
+      if (p.id === id) {
+        const updatedProject: Project = { 
+          ...p, 
+          ...updates, 
+          updatedAt: new Date().toISOString().substring(0, 10)
+        };
+        return updatedProject;
+      }
+      return p;
+    }));
   };
 
-  const assignMembers = (projectId: string, members: TeamMember[], pmId: string) => {
+  const assignMembers = (projectId: string, members: ProjectMember[], pmId: string) => {
     setProjects(projects.map(p => {
       if (p.id === projectId) {
-        const today = new Date().toISOString().split("T")[0];
-        const startDate = p.startDate || p.expectedStartDate;
+        const today = new Date().toISOString().substring(0, 10);
+        const startDate = p.actualStartDate || p.expectedStartDate;
         const status = startDate > today ? "scheduled" : "in-progress";
 
-        return {
+        const updatedProject: Project = {
           ...p,
-          assignedMembers: members,
-          pmId,
+          members: members,
+          assignedPmId: pmId,
           status,
-          lastUpdated: today
+          updatedAt: today
         };
+        return updatedProject;
       }
       return p;
     }));
   };
 
   const updateEmployee = (id: string, updates: Partial<Employee>) => {
-    setEmployees(employees.map(e => e.id === id ? { ...e, ...updates } : e));
+    setEmployees(employees.map(e => {
+      if (e.id === id) {
+        const updatedEmployee: Employee = {
+          ...e,
+          ...updates,
+          updatedAt: new Date().toISOString().substring(0, 10)
+        };
+        return updatedEmployee;
+      }
+      return e;
+    }));
   };
 
   const addRequestChange = (projectId: string, title: string, description: string) => {
@@ -545,13 +591,14 @@ export function DataProvider({ children }: { children: ReactNode }) {
           description,
           type: "general" as const,
           status: "pending" as const,
-          createdAt: new Date().toISOString().split("T")[0],
+          createdAt: new Date().toISOString().substring(0, 10),
         };
-        return {
+        const updatedProject: Project = {
           ...p,
           requestChanges: [...(p.requestChanges || []), newRequest],
-          lastUpdated: new Date().toISOString().split("T")[0],
+          updatedAt: new Date().toISOString().substring(0, 10),
         };
+        return updatedProject;
       }
       return p;
     }));
@@ -560,11 +607,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const addDetailedRequestChange = (projectId: string, changeRequest: ChangeRequest) => {
     setProjects(projects.map(p => {
       if (p.id === projectId) {
-        return {
+        const updatedProject: Project = {
           ...p,
           requestChanges: [...(p.requestChanges || []), changeRequest],
-          lastUpdated: new Date().toISOString().split("T")[0],
+          updatedAt: new Date().toISOString().substring(0, 10),
         };
+        return updatedProject;
       }
       return p;
     }));
@@ -576,11 +624,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
         const updatedRequests = p.requestChanges?.map(req => 
           req.id === requestId ? { ...req, status: "approved" as const } : req
         );
-        return {
+        const updatedProject: Project = {
           ...p,
           requestChanges: updatedRequests,
-          lastUpdated: new Date().toISOString().split("T")[0],
+          updatedAt: new Date().toISOString().substring(0, 10),
         };
+        return updatedProject;
       }
       return p;
     }));
@@ -592,11 +641,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
         const updatedRequests = p.requestChanges?.map(req =>
           req.id === requestId ? { ...req, status: "rejected" as const } : req
         );
-        return {
+        const updatedProject: Project = {
           ...p,
           requestChanges: updatedRequests,
-          lastUpdated: new Date().toISOString().split("T")[0],
+          updatedAt: new Date().toISOString().substring(0, 10),
         };
+        return updatedProject;
       }
       return p;
     }));
@@ -609,7 +659,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
           id: `EXT${Date.now()}`,
           employeeId,
           requestedBy,
-          requestedDate: new Date().toISOString().split("T")[0],
+          requestedDate: new Date().toISOString().substring(0, 10),
           proposedEndDate,
           reason,
           status: "pending",
