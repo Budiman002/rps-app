@@ -13,6 +13,7 @@ public class ProjectResponse
     public DateTime EstimatedEndDate { get; set; }
     public DateTime? ActualStartDate { get; set; }
     public int DurationWeeks { get; set; }
+    public Guid? AssignedPmId { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
     public List<RoleCompositionResponse> RoleCompositions { get; set; } = [];

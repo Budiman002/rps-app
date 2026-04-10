@@ -44,6 +44,18 @@ public class ProjectController : ControllerBase
         return Ok(result);
     }
 
+    [HttpPut("{id:guid}")]
+    public async Task<IActionResult> Update(
+        [FromRoute] Guid id,
+        [FromBody] UpdateProjectRequest request,
+        CancellationToken cancellationToken)
+    {
+        request.ProjectId = id;
+        request.UpdatedBy = GetUserId();
+        await _mediator.Send(request, cancellationToken);
+        return Ok();
+    }
+
     private Guid GetUserId()
     {
         var idClaim = User.FindFirstValue("id");

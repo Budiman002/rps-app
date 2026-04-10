@@ -3,9 +3,11 @@ using FluentValidation;
 using FluentValidation.AspNetCore;
 using MediatR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
+using RPS.Commons.Extensions;
 using RPS.Commons.RequestHandlers.Auth;
 using RPS.Entities;
 
@@ -58,8 +60,13 @@ builder.Services.AddScoped<DbSeeder>();
 
 builder.Services.AddSwaggerGen(c =>
 {
-    c.SwaggerDoc("v1", new OpenApiInfo { Title = "RPS.API", Version = "v1" });
+    c.SwaggerDoc("v1", new OpenApiInfo { Title = "RPS.WebAPI", Version = "v1" });
 });
+
+// MediatR (scans RPS.Commons assembly) + FluentValidation + ValidationBehavior pipeline
+builder.Services.AddCommonsServices();
+// Also wire up FluentValidation auto-validation for controller model binding
+builder.Services.AddFluentValidationAutoValidation();
 
 var app = builder.Build();
 
@@ -68,6 +75,53 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
+// Global exception handler: ValidationException → 400, KeyNotFoundException → 404, else 500
+app.UseExceptionHandler(exceptionHandler =>
+{
+    exceptionHandler.Run(async context =>
+    {
+        var feature = context.Features.Get<IExceptionHandlerFeature>();
+        var error = feature?.Error;
+
+        if (error is ValidationException validationEx)
+        {
+            context.Response.StatusCode = StatusCodes.Status400BadRequest;
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsJsonAsync(new
+            {
+                status = 400,
+                title = "Validation failed",
+                errors = validationEx.Errors.Select(e => new
+                {
+                    e.PropertyName,
+                    e.ErrorMessage
+                })
+            });
+        }
+        else if (error is KeyNotFoundException notFoundEx)
+        {
+            context.Response.StatusCode = StatusCodes.Status404NotFound;
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsJsonAsync(new
+            {
+                status = 404,
+                title = "Not found",
+                detail = notFoundEx.Message
+            });
+        }
+        else
+        {
+            context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsJsonAsync(new
+            {
+                status = 500,
+                title = "An unexpected error occurred"
+            });
+        }
+    });
+});
 
 using (var scope = app.Services.CreateScope())
 {

@@ -7,4 +7,9 @@ public class MemberResponse
     public string Email { get; set; } = string.Empty;
     public string Role { get; set; } = string.Empty;
     public int YearsOfExperience { get; set; }
+
+    // Linked Role Information
+    public Guid RoleCompositionId { get; set; }
+    public string RoleTitle { get; set; } = string.Empty;
+    public string SeniorityLevel { get; set; } = string.Empty;
 }

@@ -20,14 +20,17 @@ public class GetProjectDetailRequestHandler : IRequestHandler<GetProjectDetailRe
         var project = await _context.Projects
             .Include(x => x.RoleCompositions)
             .Include(x => x.Members)
-            .ThenInclude(x => x.User)
-            .FirstOrDefaultAsync(x => x.Id == request.Id, cancellationToken);
+                .ThenInclude(x => x.User)
+            .Include(x => x.Members)
+                .ThenInclude(x => x.RoleComposition)
+            .FirstOrDefaultAsync(x => x.Id == request.Id, cancellationToken)
+            ?? throw new KeyNotFoundException($"Project dengan ID {request.Id} tidak ditemukan.");
 
-        if (project is null)
-        {
-            throw new Exception("Project tidak ditemukan");
-        }
+        return MapProjectResponse(project);
+    }
 
+    internal static ProjectResponse MapProjectResponse(RPS.Entities.Project project)
+    {
         return new ProjectResponse
         {
             Id = project.Id,
@@ -41,6 +44,7 @@ public class GetProjectDetailRequestHandler : IRequestHandler<GetProjectDetailRe
             EstimatedEndDate = project.EstimatedEndDate,
             ActualStartDate = project.ActualStartDate,
             DurationWeeks = project.DurationWeeks,
+            AssignedPmId = project.AssignedPmId,
             CreatedAt = project.CreatedAt,
             UpdatedAt = project.UpdatedAt,
             RoleCompositions = project.RoleCompositions.Select(rc => new RoleCompositionResponse
@@ -57,7 +61,10 @@ public class GetProjectDetailRequestHandler : IRequestHandler<GetProjectDetailRe
                 FullName = m.User.FullName,
                 Email = m.User.Email,
                 Role = m.User.Role.ToString(),
-                YearsOfExperience = m.User.YearsOfExperience
+                YearsOfExperience = m.User.YearsOfExperience,
+                RoleCompositionId = m.RoleCompositionId,
+                RoleTitle = m.RoleComposition?.RoleTitle ?? string.Empty,
+                SeniorityLevel = m.RoleComposition?.SeniorityLevel.ToString() ?? string.Empty
             }).ToList()
         };
     }
