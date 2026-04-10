@@ -33,3 +33,16 @@ Thumbs.db
 .vs/
 **/bin/
 **/obj/
+
+# Vite cache
+.vite/
+.turbo/
+
+# Test coverage
+coverage/
+
+# Visual Studio user files
+*.user
+
+# Development/local build artifacts
+pnpm-audit.json
