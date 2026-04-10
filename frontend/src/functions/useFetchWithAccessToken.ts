@@ -26,14 +26,14 @@ export function useFetchWithAccessToken() {
   );
 
   const fetchPOST = useCallback(
-    <T,>(url: string, body: JsonValue): Promise<FetchResult<T>> => {
+    <T,>(url: string, body: any): Promise<FetchResult<T>> => {
       return tryFetchJson<T>(url, withAuthHeader({ method: "POST", body: JSON.stringify(body) }));
     },
     [withAuthHeader],
   );
 
   const fetchPUT = useCallback(
-    <T,>(url: string, body: JsonValue): Promise<FetchResult<T>> => {
+    <T,>(url: string, body: any): Promise<FetchResult<T>> => {
       return tryFetchJson<T>(url, withAuthHeader({ method: "PUT", body: JSON.stringify(body) }));
     },
     [withAuthHeader],

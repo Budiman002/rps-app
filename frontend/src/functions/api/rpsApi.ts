@@ -8,7 +8,7 @@ export function useRpsApi() {
   return {
     getProjects: () => fetchGET<Project[]>(BackendApiUrl.getProjects),
     getProjectById: (id: string) => fetchGET<Project>(GetProjectById(id)),
-    createProject: (payload: Omit<Project, "id" | "lastUpdated" | "status">) =>
+    createProject: (payload: Omit<Project, "id" | "updatedAt" | "status">) =>
       fetchPOST<Project>(BackendApiUrl.createProject, payload),
     updateProject: (id: string, payload: Partial<Project>) =>
       fetchPUT<Project>(UpdateProjectById(id), payload),

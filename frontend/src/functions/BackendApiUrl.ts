@@ -7,9 +7,9 @@ export const BackendApiUrl = {
   register: `${baseUrl}/Auth/register`,
   getDashboardStats: `${baseUrl}/Dashboard/stats`,
   getProjects: `${baseUrl}/Project`,
-  getProjectById: `${baseUrl}/Project{id}`,
+  getProjectById: `${baseUrl}/Project`,
   createProject: `${baseUrl}/Project`,
-  updateProject: `${baseUrl}/Project/{id}`,
+  updateProject: `${baseUrl}/Project`,
   getEmployees: `${baseUrl}/employees`,
   createChangeRequest: `${baseUrl}/projects/change-requests`,
 };

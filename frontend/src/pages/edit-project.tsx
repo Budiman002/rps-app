@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { ArrowLeft, Plus, Trash2 } from "lucide-react";
+import { useRpsApi } from "@/functions/api/rpsApi";
 
 export function EditProject() {
   const { id } = useParams();
@@ -18,6 +19,7 @@ export function EditProject() {
   const { projects, employees, updateProject } = useData();
   const navigate = useNavigate();
   const location = useLocation();
+  const rpsApi = useRpsApi();
 
   const project = projects.find(p => p.id === id);
 
@@ -151,18 +153,26 @@ export function EditProject() {
       const durationWeeks = parseInt(duration);
       const endDate = calculateEndDate(startDate, durationWeeks);
 
-      updateProject(project.id, {
+      const payload = {
         actualStartDate: startDate,
         durationWeeks,
         endDate,
         roleCompositions: roles,
         members: teamMembers,
-      });
+      };
 
-      toast.success("Project updated successfully");
-      navigate(`/app/projects/${project.id}`, { state: { from: location.state?.from } });
+      const result = await rpsApi.updateProject(project.id, payload);
+
+      if (result.data) {
+        // Update local mock state if necessary for immediate UI reflection
+        updateProject(project.id, payload);
+        toast.success("Project updated successfully");
+        navigate(`/app/projects/${project.id}`, { state: { from: location.state?.from } });
+      } else {
+        toast.error(result.error || "Failed to update project");
+      }
     } catch (error) {
-      toast.error("Failed to update project");
+      toast.error("An unexpected error occurred");
     } finally {
       setLoading(false);
     }
@@ -499,7 +509,7 @@ export function EditProject() {
           >
             Cancel
           </Button>
-          <Button type="submit" disabled={loading} onClick={() => navigate(`/app/projects/${project.id}`, { state: { from: location.state?.from } })}>
+          <Button type="submit" disabled={loading}>
             {loading ? "Saving..." : "Save All Changes"}
           </Button>
         </div>
