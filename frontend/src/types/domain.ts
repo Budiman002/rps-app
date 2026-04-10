@@ -1,4 +1,4 @@
-export type UserRole = "marketing" | "gm" | "pm" | "hr";
+export type UserRole = "Marketing" | "GM" | "PM" | "HR";
 
 export interface User {
   id: string;
@@ -7,15 +7,19 @@ export interface User {
   role: UserRole;
 }
 
-export type ProjectStatus = "unassigned" | "scheduled" | "in-progress" | "completed";
-export type Priority = "low" | "medium" | "high" | "critical";
+export type ProjectStatus =
+  | "Unassigned"
+  | "Scheduled"
+  | "InProgress"
+  | "Completed";
+export type Priority = "Low" | "Medium" | "High" | "Critical";
 export type Seniority = "intern" | "junior" | "senior";
 
 export interface TeamMember {
-  id: string;
-  employeeId: string;
-  role: string;
-  seniority: Seniority;
+  roleTitle: string;
+  seniorityLevel: Seniority;
+  quantity: number;
+  employmentStatus: "dedicated" | "parallel";
 }
 
 export interface ChangeRequest {
@@ -35,8 +39,18 @@ export interface ChangeRequest {
       newDuration?: number;
     };
     roles?: {
-      added?: Array<{ role: string; seniority: Seniority; count: number; allocationType?: "dedicated" | "parallel" }>;
-      removed?: Array<{ role: string; seniority: Seniority; count: number; allocationType?: "dedicated" | "parallel" }>;
+      added?: Array<{
+        role: string;
+        seniority: Seniority;
+        count: number;
+        allocationType?: "dedicated" | "parallel";
+      }>;
+      removed?: Array<{
+        role: string;
+        seniority: Seniority;
+        count: number;
+        allocationType?: "dedicated" | "parallel";
+      }>;
       modified?: Array<{
         role: string;
         seniority: Seniority;
@@ -47,7 +61,11 @@ export interface ChangeRequest {
     };
     employees?: {
       added?: Array<{ employeeId: string; role: string; seniority: Seniority }>;
-      removed?: Array<{ employeeId: string; role: string; seniority: Seniority }>;
+      removed?: Array<{
+        employeeId: string;
+        role: string;
+        seniority: Seniority;
+      }>;
     };
   };
 }
@@ -58,23 +76,24 @@ export interface Project {
   clientName: string;
   description: string;
   expectedStartDate: string;
-  duration: number;
+  durationWeeks: number;
   estimatedEndDate: string;
-  startDate?: string;
+  actualStartDate?: string;
   endDate?: string;
   priority: Priority;
   status: ProjectStatus;
-  notes: string;
+  notesFromMarketing: string;
   poDocument?: string;
   teamComposition: Array<{
     role: string;
     seniority: Seniority;
-    allocationType: "dedicated" | "parallel";
-    count: number;
+    employmentStatus: "dedicated" | "parallel";
+    quantity: number;
   }>;
   assignedMembers?: TeamMember[];
   pmId?: string;
-  lastUpdated: string;
+  createdAt: string;
+  updatedAt: string;
   requestChanges?: ChangeRequest[];
 }
 
@@ -90,16 +109,14 @@ export interface ContractExtensionRequest {
 
 export interface Employee {
   id: string;
-  name: string;
+  fullName: string;
   email: string;
-  dob: string;
-  role: string;
-  seniority: Seniority;
+  jobTitle: string;
+  seniorityLevel: Seniority;
+  yearsOfExperience: number;
   contractType: "permanent" | "contract";
-  contractStartDate: string;
   contractEndDate?: string;
-  isDedicated: boolean;
-  currentProject?: string;
+  createdAt: string;
+  updatedAt: string;
   extensionRequest?: ContractExtensionRequest;
 }
-

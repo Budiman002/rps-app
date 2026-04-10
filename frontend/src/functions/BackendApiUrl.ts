@@ -3,10 +3,13 @@ import { AppSettings } from "./AppSettings";
 const baseUrl = AppSettings.apiGatewayBasePath;
 
 export const BackendApiUrl = {
-  getProjects: `${baseUrl}/projects`,
-  getProjectById: `${baseUrl}/projects`,
-  createProject: `${baseUrl}/projects`,
-  updateProject: `${baseUrl}/projects`,
+  login: `${baseUrl}/Auth/login`,
+  register: `${baseUrl}/Auth/register`,
+  getDashboardStats: `${baseUrl}/Dashboard/stats`,
+  getProjects: `${baseUrl}/Project`,
+  getProjectById: `${baseUrl}/Project`,
+  createProject: `${baseUrl}/Project`,
+  updateProject: `${baseUrl}/Project`,
   getEmployees: `${baseUrl}/employees`,
   createChangeRequest: `${baseUrl}/projects/change-requests`,
 };
@@ -18,4 +21,3 @@ export function GetProjectById(id: string): string {
 export function UpdateProjectById(id: string): string {
   return `${BackendApiUrl.updateProject}/${encodeURIComponent(id)}`;
 }
-
