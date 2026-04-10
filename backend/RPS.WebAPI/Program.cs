@@ -24,12 +24,24 @@ builder.Services.AddValidatorsFromAssembly(typeof(RegisterRequestHandler).Assemb
 
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("FrontendPolicy", policy =>
+    if (builder.Environment.IsDevelopment())
     {
-        policy.WithOrigins("http://localhost:5173")
-            .AllowAnyHeader()
-            .AllowAnyMethod();
-    });
+        options.AddPolicy("FrontendPolicy", policy =>
+        {
+            policy.AllowAnyOrigin()
+                  .AllowAnyHeader()
+                  .AllowAnyMethod();
+        });
+    }
+    else
+    {
+        options.AddPolicy("FrontendPolicy", policy =>
+        {
+            policy.WithOrigins("http://localhost:5173")
+                  .AllowAnyHeader()
+                  .AllowAnyMethod();
+        });
+    }
 });
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
