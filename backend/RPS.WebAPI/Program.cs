@@ -141,8 +141,13 @@ using (var scope = app.Services.CreateScope())
     await dbSeeder.SeedAsync();
 }
 
-app.UseHttpsRedirection();
 app.UseCors("FrontendPolicy");
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
+
 app.UseAuthentication();
 app.UseAuthorization();
 
