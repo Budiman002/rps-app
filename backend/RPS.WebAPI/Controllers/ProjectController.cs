@@ -45,6 +45,7 @@ public class ProjectController : ControllerBase
     }
 
     [HttpPut("{id:guid}")]
+    [Authorize(Roles = "GM")]
     public async Task<IActionResult> Update(
         [FromRoute] Guid id,
         [FromBody] UpdateProjectRequest request,
