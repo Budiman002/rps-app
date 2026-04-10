@@ -27,9 +27,3 @@ Thumbs.db
 *.swp
 *.swo
 *~
-
-**/appsettings.json
-**/appsettings.Development.json
-.vs/
-**/bin/
-**/obj/
