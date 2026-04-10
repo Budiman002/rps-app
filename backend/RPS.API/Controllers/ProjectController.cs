@@ -19,12 +19,8 @@ public class ProjectController : ControllerBase
         this.projectService = projectService;
     }
 
-    [HttpGet("test")]
-    [AllowAnonymous]
-    public IActionResult Test() => Ok("works");
-
     [HttpPost]
-    [Authorize]
+    [Authorize(Roles = "Marketing")]
     public async Task<IActionResult> Create([FromBody] CreateProjectDTO dto)
     {
         try
