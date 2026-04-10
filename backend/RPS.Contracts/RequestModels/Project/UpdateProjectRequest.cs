@@ -16,6 +16,5 @@ public class UpdateProjectRequest : IRequest<Unit>
     public int? NewDurationWeeks { get; set; }
 
     public List<RoleCompositionItem> Roles { get; set; } = new();
-
     public List<ProjectMemberItem> Members { get; set; } = new();
 }

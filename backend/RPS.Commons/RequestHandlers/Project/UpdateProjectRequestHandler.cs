@@ -66,6 +66,7 @@ public class UpdateProjectRequestHandler : IRequestHandler<UpdateProjectRequest,
         project.UpdatedAt = DateTime.UtcNow;
 
         // ---- 2. ROLES SYNC ----------------------------------------------
+        Console.WriteLine($"Syncing Roles: {request.Roles.Count} incoming");
 
         var existingRoles = project.RoleCompositions.ToList();
         var incomingRoleIds = request.Roles
@@ -77,25 +78,30 @@ public class UpdateProjectRequestHandler : IRequestHandler<UpdateProjectRequest,
         var rolesToRemove = existingRoles
             .Where(r => !incomingRoleIds.Contains(r.Id))
             .ToList();
-        _context.ProjectRoleCompositions.RemoveRange(rolesToRemove);
+        
+        if (rolesToRemove.Any())
+        {
+            Console.WriteLine($"Removing {rolesToRemove.Count} roles");
+            _context.ProjectRoleCompositions.RemoveRange(rolesToRemove);
+        }
 
         foreach (var incoming in request.Roles)
         {
-            if (incoming.Id.HasValue && incoming.Id != Guid.Empty)
+            var existing = (incoming.Id.HasValue && incoming.Id != Guid.Empty)
+                ? existingRoles.FirstOrDefault(r => r.Id == incoming.Id.Value)
+                : null;
+
+            if (existing != null)
             {
-                var existing = existingRoles.FirstOrDefault(r => r.Id == incoming.Id.Value);
-                if (existing != null)
-                {
-                    existing.RoleTitle = incoming.RoleTitle;
-                    existing.SeniorityLevel = Enum.Parse<SeniorityLevel>(incoming.SeniorityLevel);
-                    existing.EmploymentStatus = Enum.Parse<EmploymentStatus>(incoming.EmploymentStatus);
-                    existing.Quantity = incoming.Quantity;
-                    existing.UpdatedAt = DateTime.UtcNow;
-                }
+                existing.RoleTitle = incoming.RoleTitle;
+                existing.SeniorityLevel = Enum.Parse<SeniorityLevel>(incoming.SeniorityLevel);
+                existing.EmploymentStatus = Enum.Parse<EmploymentStatus>(incoming.EmploymentStatus);
+                existing.Quantity = incoming.Quantity;
+                existing.UpdatedAt = DateTime.UtcNow;
             }
             else
             {
-                _context.ProjectRoleCompositions.Add(new ProjectRoleComposition
+                var newRole = new ProjectRoleComposition
                 {
                     ProjectId = project.Id,
                     RoleTitle = incoming.RoleTitle,
@@ -104,33 +110,47 @@ public class UpdateProjectRequestHandler : IRequestHandler<UpdateProjectRequest,
                     Quantity = incoming.Quantity,
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
-                });
+                };
+
+                // Use provided ID if available (for member linking in the same request)
+                if (incoming.Id.HasValue && incoming.Id != Guid.Empty)
+                {
+                    newRole.Id = incoming.Id.Value;
+                }
+
+                _context.ProjectRoleCompositions.Add(newRole);
             }
         }
 
         // ---- 3. MEMBERS SYNC --------------------------------------------
+        Console.WriteLine($"Syncing Members: {request.Members.Count} incoming");
 
         var existingMembers = project.Members.ToList();
         var incomingMemberKeys = request.Members
-            .Select(m => (m.UserId, m.RoleCompositionId))
+            .Select(m => (m.EmployeeId, m.RoleCompositionId))
             .ToHashSet();
 
         var membersToRemove = existingMembers
-            .Where(m => !incomingMemberKeys.Contains((m.UserId, m.RoleCompositionId)))
+            .Where(m => !incomingMemberKeys.Contains((m.EmployeeId, m.RoleCompositionId)))
             .ToList();
-        _context.ProjectMembers.RemoveRange(membersToRemove);
+
+        if (membersToRemove.Any())
+        {
+            Console.WriteLine($"Removing {membersToRemove.Count} members");
+            _context.ProjectMembers.RemoveRange(membersToRemove);
+        }
 
         var existingMemberKeys = existingMembers
-            .Select(m => (m.UserId, m.RoleCompositionId))
+            .Select(m => (m.EmployeeId, m.RoleCompositionId))
             .ToHashSet();
 
         foreach (var incoming in request.Members.Where(
-            m => !existingMemberKeys.Contains((m.UserId, m.RoleCompositionId))))
+            m => !existingMemberKeys.Contains((m.EmployeeId, m.RoleCompositionId))))
         {
             _context.ProjectMembers.Add(new ProjectMember
             {
                 ProjectId = project.Id,
-                UserId = incoming.UserId,
+                EmployeeId = incoming.EmployeeId,
                 RoleCompositionId = incoming.RoleCompositionId,
                 AssignedBy = request.UpdatedBy,
                 AssignedAt = DateTime.UtcNow
@@ -138,6 +158,7 @@ public class UpdateProjectRequestHandler : IRequestHandler<UpdateProjectRequest,
         }
 
         await _context.SaveChangesAsync(cancellationToken);
+        Console.WriteLine("Update saved successfully");
         return Unit.Value;
     }
 }

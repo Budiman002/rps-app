@@ -12,5 +12,4 @@ public class MemberResponse
     // Linked Role Information
     public Guid RoleCompositionId { get; set; }
     public string RoleTitle { get; set; } = string.Empty;
-    public string SeniorityLevel { get; set; } = string.Empty;
 }

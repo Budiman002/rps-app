@@ -20,7 +20,7 @@ public class GetProjectDetailRequestHandler : IRequestHandler<GetProjectDetailRe
         var project = await _context.Projects
             .Include(x => x.RoleCompositions)
             .Include(x => x.Members)
-                .ThenInclude(x => x.User)
+                .ThenInclude(x => x.Employee)
             .Include(x => x.Members)
                 .ThenInclude(x => x.RoleComposition)
             .FirstOrDefaultAsync(x => x.Id == request.Id, cancellationToken)
@@ -64,8 +64,7 @@ public class GetProjectDetailRequestHandler : IRequestHandler<GetProjectDetailRe
                 SeniorityLevel = m.Employee.SeniorityLevel,
                 YearsOfExperience = m.Employee.YearsOfExperience,
                 RoleCompositionId = m.RoleCompositionId,
-                RoleTitle = m.RoleComposition?.RoleTitle ?? string.Empty,
-                SeniorityLevel = m.RoleComposition?.SeniorityLevel.ToString() ?? string.Empty
+                RoleTitle = m.RoleComposition?.RoleTitle ?? string.Empty
             }).ToList()
         };
     }

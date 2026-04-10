@@ -41,9 +41,9 @@ public class UpdateProjectRequestValidator : AbstractValidator<UpdateProjectRequ
 
         RuleForEach(x => x.Members).ChildRules(member =>
         {
-            member.RuleFor(m => m.UserId)
+            member.RuleFor(m => m.EmployeeId)
                 .NotEqual(Guid.Empty)
-                .WithMessage("A valid User ID is required for each member.");
+                .WithMessage("A valid Employee ID is required for each member.");
 
             member.RuleFor(m => m.RoleCompositionId)
                 .NotEqual(Guid.Empty)
