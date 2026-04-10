@@ -8,18 +8,30 @@ export interface User {
 }
 
 export type ProjectStatus =
-  | "Unassigned"
-  | "Scheduled"
-  | "InProgress"
-  | "Completed";
-export type Priority = "Low" | "Medium" | "High" | "Critical";
+  | "unassigned"
+  | "scheduled"
+  | "in-progress"
+  | "completed";
+export type Priority = "low" | "medium" | "high" | "critical";
 export type Seniority = "intern" | "junior" | "senior";
 
-export interface TeamMember {
+export interface RoleComposition {
+  id: string;
   roleTitle: string;
   seniorityLevel: Seniority;
   quantity: number;
   employmentStatus: "dedicated" | "parallel";
+}
+
+export interface ProjectMember {
+  id: string;
+  employeeId: string;
+  fullName: string;
+  email: string;
+  jobTitle: string;
+  seniorityLevel: Seniority;
+  roleCompositionId: string;
+  roleTitle: string;
 }
 
 export interface ChangeRequest {
@@ -84,14 +96,9 @@ export interface Project {
   status: ProjectStatus;
   notesFromMarketing: string;
   poDocument?: string;
-  teamComposition: Array<{
-    role: string;
-    seniority: Seniority;
-    employmentStatus: "dedicated" | "parallel";
-    quantity: number;
-  }>;
-  assignedMembers?: TeamMember[];
-  pmId?: string;
+  roleCompositions: RoleComposition[];
+  members?: ProjectMember[];
+  assignedPmId?: string;
   createdAt: string;
   updatedAt: string;
   requestChanges?: ChangeRequest[];
@@ -116,6 +123,8 @@ export interface Employee {
   yearsOfExperience: number;
   contractType: "permanent" | "contract";
   contractEndDate?: string;
+  isDedicated?: boolean;
+  currentProject?: string;
   createdAt: string;
   updatedAt: string;
   extensionRequest?: ContractExtensionRequest;

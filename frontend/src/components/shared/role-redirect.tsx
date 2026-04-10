@@ -34,7 +34,7 @@ export function RoleRoute({
   allowedRoles,
   children,
 }: {
-  allowedRoles: Array<"marketing" | "gm" | "pm" | "hr">;
+  allowedRoles: Array<"Marketing" | "GM" | "PM" | "HR">;
   children: React.ReactNode;
 }) {
   const { user, isLoading, isAuthenticated } = useAuth();

@@ -35,7 +35,7 @@ export const router = createBrowserRouter([
       {
         path: "dashboard",
         element: (
-          <RoleRoute allowedRoles={["marketing", "gm"]}>
+          <RoleRoute allowedRoles={["Marketing", "GM"]}>
             <Dashboard />
           </RoleRoute>
         ),
@@ -43,7 +43,7 @@ export const router = createBrowserRouter([
       {
         path: "pm-dashboard",
         element: (
-          <RoleRoute allowedRoles={["pm"]}>
+          <RoleRoute allowedRoles={["PM"]}>
             <PMDashboard />
           </RoleRoute>
         ),
@@ -56,7 +56,7 @@ export const router = createBrowserRouter([
       {
         path: "employees",
         element: (
-          <RoleRoute allowedRoles={["hr", "gm"]}>
+          <RoleRoute allowedRoles={["HR", "GM"]}>
             <EmployeeManagement />
           </RoleRoute>
         ),
