@@ -1,7 +1,8 @@
 # Backend Guidelines — Resource Planning System (RPS)
+> Mengikuti standard Accelist Vibe-Code-Basic: https://github.com/accelist/Vibe-Code-Basic/blob/main/be-standard.md
 
 ## Project Overview
-Resource Planning System (RPS) adalah sistem internal perusahaan untuk manajemen sumber daya manusia dan proyek. Backend bertugas menyediakan REST API yang dikonsumsi oleh frontend Next.js/React.
+Resource Planning System (RPS) adalah sistem internal perusahaan untuk manajemen sumber daya manusia dan proyek. Backend menyediakan REST API yang dikonsumsi oleh frontend React.
 
 ### Roles & Permission
 | Role | Akses |
@@ -18,389 +19,299 @@ Unassigned → Scheduled → In Progress → Complete
 
 ---
 
-## Tech Stack
-- ASP.NET Core Web API (.NET 8)
-- Entity Framework Core
-- PostgreSQL (via Npgsql)
-- JWT Authentication
+## 1. Architecture & Stack
+
+| Layer | Technology | Purpose |
+|---|---|---|
+| Framework | .NET 10 | Runtime & SDK |
+| Language | C# | Primary language |
+| Database | PostgreSQL | Relational data store |
+| ORM | Entity Framework Core | Code-first data access |
+| Pattern | Clean Architecture + CQRS | Separation of concerns |
+| Mediator | MediatR | Decouples controllers from business logic |
+| Auth | JWT Bearer | Authentication & Authorization |
+| Validation | FluentValidation | Request model validation |
+| Password | BCrypt.Net-Next | Password hashing |
 
 ---
 
-## Environment & Credentials
+## 2. Project Structure
+
 ```
-Backend URL:   http://localhost:5000
-Database:      rps_db
-DB Username:   postgres
-DB Password:   postgres
-DB Host:       localhost
-DB Port:       5432
+backend/
+├── RPS.WebAPI/                  # Entry point — HTTP API, thin controllers
+│   ├── Controllers/             # API controllers (RESTful, thin)
+│   ├── AuthorizationPolicies/   # Custom authorization policies
+│   ├── Program.cs               # Startup, DI, middleware pipeline
+│   └── appsettings.json         # Configuration (JANGAN DI-COMMIT)
+├── RPS.Commons/                 # Application Layer — core logic
+│   ├── Constants/               # Shared constants, enums
+│   ├── Extensions/              # Service registration extension methods
+│   ├── Helpers/                 # Utility classes (JwtHelper, dll)
+│   ├── RequestHandlers/         # CQRS handlers (by feature)
+│   │   ├── Auth/
+│   │   ├── Project/
+│   │   ├── Dashboard/
+│   │   └── ...
+│   └── Validators/              # FluentValidation validators (by feature)
+│       ├── Auth/
+│       ├── Project/
+│       └── ...
+├── RPS.Contracts/               # DTOs — zero logic, zero dependencies
+│   ├── RequestModels/           # Incoming DTOs (by feature)
+│   │   ├── Auth/
+│   │   ├── Project/
+│   │   ├── Dashboard/
+│   │   └── ...
+│   └── ResponseModels/          # Outgoing DTOs (by feature)
+│       ├── Auth/
+│       ├── Project/
+│       ├── Dashboard/
+│       └── ...
+└── RPS.Entities/                # Domain & Data Access Layer
+    ├── Data/
+    │   ├── AppDbContext.cs      # EF Core DbContext
+    │   └── DbSeeder.cs          # Dummy data seeder
+    ├── Migrations/              # Auto-generated EF migrations
+    └── [Entity].cs              # Entity classes (satu file per entity)
 ```
+
+### Key Rules
+- **Feature folders**: File di RequestHandlers, Validators, RequestModels, ResponseModels WAJIB dikelompokkan per fitur
+- **One class per file**: Satu class per file, tidak boleh digabung
+- Hanya `RPS.WebAPI` yang runnable. `RPS.Commons`, `RPS.Contracts`, `RPS.Entities` adalah class libraries
 
 ---
 
-## Folder Structure
+## 3. Database Schema (ERD)
+
+### Users
 ```
-RPS.API/
-├── Controllers/        # HTTP endpoints — hanya routing & response
-├── Models/             # Database entities (EF Core)
-├── DTOs/               # Request & Response shapes
-│   ├── Request/        # DTO untuk request body
-│   └── Response/       # DTO untuk response body
-├── Services/           # Business logic — semua logic ada di sini
-├── Data/
-│   ├── AppDbContext.cs # EF Core DB context
-│   └── DbSeeder.cs     # Dummy data seeder
-├── Helpers/            # Utility functions (JWT, password hash, dll)
-├── Middleware/         # Custom middleware
-└── Program.cs          # App entry point & service registration
+id (uuid PK), full_name, email, password (hashed),
+role (GM/PM/Marketing/HR), contract_type (permanent/contract),
+contract_end_date (nullable), years_of_experience,
+created_at, updated_at
 ```
 
----
-
-## Database Schema (ERD)
-
-### Tabel Users
+### Projects
 ```
-users
-├── id                  uuid PK
-├── full_name           string
-├── email               string UNIQUE
-├── password            string (hashed)
-├── role                enum: GM, PM, Marketing, HR
-├── contract_type       enum: permanent, contract
-├── contract_end_date   date? (nullable)
-├── years_of_experience int
-├── created_at          timestamp
-└── updated_at          timestamp
+id (uuid PK), name, client_name, description, notes_from_marketing,
+priority (Low/Medium/High/Critical),
+status (Unassigned/Scheduled/InProgress/Complete),
+expected_start_date, actual_start_date (nullable), estimated_end_date,
+duration_weeks, created_by FK, assigned_pm_id FK (nullable),
+created_at, updated_at
 ```
 
-### Tabel Projects
+### ProjectRoleCompositions
 ```
-projects
-├── id                    uuid PK
-├── name                  string
-├── client_name           string
-├── description           text
-├── notes_from_marketing  text?
-├── priority              enum: Low, Medium, High, Critical
-├── status                enum: Unassigned, Scheduled, InProgress, Complete
-├── expected_start_date   date
-├── actual_start_date     date?
-├── estimated_end_date    date
-├── duration_weeks        int
-├── created_by            uuid FK → users.id
-├── assigned_pm_id        uuid? FK → users.id
-├── created_at            timestamp
-└── updated_at            timestamp
+id (uuid PK), project_id FK, role_title,
+seniority_level (Senior/Junior/Intern),
+employment_status (Dedicated/Parallel),
+quantity, created_at, updated_at
 ```
 
-### Tabel ProjectRoleCompositions
+### ProjectMembers
 ```
-project_role_compositions
-├── id                uuid PK
-├── project_id        uuid FK → projects.id
-├── role_title        string
-├── seniority_level   enum: Senior, Junior, Intern
-├── employment_status enum: Dedicated, Parallel
-├── quantity          int
-├── created_at        timestamp
-└── updated_at        timestamp
+id (uuid PK), project_id FK, user_id FK,
+role_composition_id FK, assigned_by FK, assigned_at
 ```
 
-### Tabel ProjectMembers
+### ChangeRequests
 ```
-project_members
-├── id                  uuid PK
-├── project_id          uuid FK → projects.id
-├── user_id             uuid FK → users.id
-├── role_composition_id uuid FK → project_role_compositions.id
-├── assigned_by         uuid FK → users.id
-└── assigned_at         timestamp
-```
-
-### Tabel ChangeRequests
-```
-change_requests
-├── id                  uuid PK
-├── project_id          uuid FK → projects.id
-├── requested_by        uuid FK → users.id
-├── change_title        string
-├── change_description  text
-├── request_type        enum: Timeline, Team, Roles
-├── new_start_date      date?
-├── new_end_date        date?
-├── new_duration_weeks  int?
-├── status              enum: Pending, Approved, Rejected
-├── created_at          timestamp
-└── updated_at          timestamp
+id (uuid PK), project_id FK, requested_by FK,
+change_title, change_description,
+request_type (Timeline/Team/Roles),
+new_start_date (nullable), new_end_date (nullable),
+new_duration_weeks (nullable),
+status (Pending/Approved/Rejected), created_at, updated_at
 ```
 
-### Tabel ContractExtendRequests
+### ContractExtendRequests
 ```
-contract_extend_requests
-├── id                  uuid PK
-├── employee_id         uuid FK → users.id
-├── requested_by        uuid FK → users.id
-├── reason              text
-├── requested_end_date  date
-├── status              enum: Pending, Approved, Rejected
-├── created_at          timestamp
-└── updated_at          timestamp
+id (uuid PK), employee_id FK, requested_by FK,
+reason, requested_end_date,
+status (Pending/Approved/Rejected), created_at, updated_at
 ```
 
-### Tabel Notifications
+### Notifications
 ```
-notifications
-├── id              uuid PK
-├── recipient_id    uuid FK → users.id
-├── type            string
-├── title           string
-├── message         text
-├── reference_id    uuid?
-├── reference_type  string?
-├── is_read         boolean
-└── created_at      timestamp
+id (uuid PK), recipient_id FK, type, title, message,
+reference_id (nullable), reference_type (nullable),
+is_read, created_at
 ```
 
 ---
 
-## Naming Convention
-- **Class & Method:** PascalCase → `ProjectService`, `GetAllProjects()`
-- **Variable & parameter:** camelCase → `projectId`, `userId`
-- **Controller:** suffix `Controller` → `ProjectController`
-- **DTO:** suffix `DTO` → `CreateProjectDTO`, `ProjectResponseDTO`
-- **Service:** suffix `Service` → `ProjectService`
-- **Interface:** prefix `I` → `IProjectService`
-- **Enum:** PascalCase → `ProjectStatus.InProgress`
+## 4. Design Patterns
 
----
+### CQRS + MediatR
+- **Requests** (Commands/Queries): Simple DTOs di `RPS.Contracts/RequestModels`. Implement `IRequest<TResponse>`
+- **Handlers**: Di `RPS.Commons/RequestHandlers`. Implement `IRequestHandler<TRequest, TResponse>`. Satu handler per request
+- **Controllers** hanya memanggil `_mediator.Send(request)` — TIDAK ADA business logic di controller
 
-## Standard API Response Format
-Semua endpoint WAJIB return format ini — tidak boleh return object langsung:
-
-```csharp
-public class ApiResponse<T>
-{
-    public bool Success { get; set; }
-    public T? Data { get; set; }
-    public string Message { get; set; } = string.Empty;
-}
+### Contoh Flow
 ```
-
-### Contoh Response Sukses
-```json
-{
-  "success": true,
-  "data": { "id": "uuid", "name": "Project A" },
-  "message": "Project berhasil dibuat"
-}
-```
-
-### Contoh Response Error
-```json
-{
-  "success": false,
-  "data": null,
-  "message": "Project tidak ditemukan"
-}
+Request HTTP → Controller → mediator.Send(request) → Handler → Database → Response
 ```
 
 ---
 
-## HTTP Status Code Convention
-| Kondisi | Status Code |
-|---|---|
-| Sukses GET/PUT | 200 OK |
-| Sukses POST (create) | 201 Created |
-| Tidak ada konten | 204 No Content |
-| Request tidak valid | 400 Bad Request |
-| Tidak terautentikasi | 401 Unauthorized |
-| Tidak punya akses | 403 Forbidden |
-| Data tidak ditemukan | 404 Not Found |
-| Error server | 500 Internal Server Error |
+## 5. Naming Convention
+
+| Element | Convention | Contoh |
+|---|---|---|
+| Class / Interface / Method / Property | PascalCase | `CreateProjectRequestHandler` |
+| Parameter / Local Variable | camelCase | `projectId`, `userId` |
+| Private Field | `_camelCase` | `_mediator`, `_context` |
+| Request Models | `[Action][Resource]Request` | `CreateProjectRequest` |
+| Response Models | `[Action][Resource]Response` | `ProjectResponse` |
+| Validators | `[RequestName]Validator` | `CreateProjectRequestValidator` |
+| Handlers | `[RequestName]Handler` | `CreateProjectRequestHandler` |
+| List Queries | `Get[Entity]ListRequest` | `GetProjectListRequest` |
 
 ---
 
-## Controller Pattern
-Controller hanya boleh berisi routing dan memanggil service. Logic bisnis TIDAK boleh ada di controller.
+## 6. Controller Standards
 
 ```csharp
 [ApiController]
 [Route("api/[controller]")]
-[Authorize] // Semua endpoint butuh JWT kecuali login/register
+[Authorize]
 public class ProjectController : ControllerBase
 {
-    private readonly IProjectService _projectService;
+    private readonly IMediator _mediator;
 
-    public ProjectController(IProjectService projectService)
+    public ProjectController(IMediator mediator)
     {
-        _projectService = projectService;
+        _mediator = mediator;
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAll()
+    public async Task<IActionResult> GetAll(
+        [FromQuery] GetProjectListRequest request,
+        CancellationToken cancellationToken)
     {
-        try
-        {
-            var projects = await _projectService.GetAllAsync();
-            return Ok(new ApiResponse<List<ProjectResponseDTO>>
-            {
-                Success = true,
-                Data = projects,
-                Message = "Berhasil"
-            });
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(500, new ApiResponse<object>
-            {
-                Success = false,
-                Message = ex.Message
-            });
-        }
+        var result = await _mediator.Send(request, cancellationToken);
+        return Ok(result);
     }
 
     [HttpPost]
     [Authorize(Roles = "Marketing")]
-    public async Task<IActionResult> Create([FromBody] CreateProjectDTO dto)
+    public async Task<IActionResult> Create(
+        [FromBody] CreateProjectRequest request,
+        CancellationToken cancellationToken)
     {
-        try
-        {
-            var project = await _projectService.CreateAsync(dto);
-            return CreatedAtAction(nameof(GetAll), new ApiResponse<ProjectResponseDTO>
-            {
-                Success = true,
-                Data = project,
-                Message = "Project berhasil dibuat"
-            });
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(500, new ApiResponse<object>
-            {
-                Success = false,
-                Message = ex.Message
-            });
-        }
+        var result = await _mediator.Send(request, cancellationToken);
+        return Ok(result);
     }
 }
 ```
 
+### Rules
+- Inherit dari `ControllerBase`
+- Gunakan `[FromQuery]` untuk GET, `[FromBody]` untuk POST/PUT
+- Selalu terima `CancellationToken`
+- Apply `[Authorize]` di controller atau action level
+- Gunakan HTTP status code yang benar (200, 201, 400, 401, 403, 404, 500)
+
 ---
 
-## Service Pattern
-Semua business logic ada di Service. Service mengakses database via AppDbContext.
+## 7. Handler Standards
 
 ```csharp
-public interface IProjectService
-{
-    Task<List<ProjectResponseDTO>> GetAllAsync();
-    Task<ProjectResponseDTO> CreateAsync(CreateProjectDTO dto);
-}
-
-public class ProjectService : IProjectService
+public class CreateProjectRequestHandler : IRequestHandler<CreateProjectRequest, ProjectResponse>
 {
     private readonly AppDbContext _context;
+    private readonly ILogger<CreateProjectRequestHandler> _logger;
 
-    public ProjectService(AppDbContext context)
+    public CreateProjectRequestHandler(AppDbContext context, ILogger<CreateProjectRequestHandler> logger)
     {
         _context = context;
+        _logger = logger;
     }
 
-    public async Task<List<ProjectResponseDTO>> GetAllAsync()
+    public async Task<ProjectResponse> Handle(CreateProjectRequest request, CancellationToken cancellationToken)
     {
-        return await _context.Projects
-            .Include(p => p.ProjectMembers)
-            .Include(p => p.RoleCompositions)
-            .Select(p => new ProjectResponseDTO
-            {
-                Id = p.Id,
-                Name = p.Name,
-                Status = p.Status.ToString(),
-                Priority = p.Priority.ToString(),
-            })
-            .ToListAsync();
+        // Business logic di sini
+        var project = new Project
+        {
+            Name = request.Name,
+            // ...
+        };
+
+        _context.Projects.Add(project);
+        await _context.SaveChangesAsync(cancellationToken);
+
+        return new ProjectResponse
+        {
+            Id = project.Id,
+            // ...
+        };
     }
 }
 ```
 
 ---
 
-## DTO Rules
-- Jangan pernah expose Model (entity) langsung ke response
-- Selalu buat DTO terpisah untuk Request dan Response
-- Taruh di folder `DTOs/Request/` dan `DTOs/Response/`
+## 8. Validator Standards
 
 ```csharp
-// DTOs/Request/CreateProjectDTO.cs
-public class CreateProjectDTO
+public class CreateProjectRequestValidator : AbstractValidator<CreateProjectRequest>
 {
-    public string Name { get; set; } = string.Empty;
-    public string ClientName { get; set; } = string.Empty;
-    public string? Description { get; set; }
-    public string? NotesFromMarketing { get; set; }
-    public string Priority { get; set; } = string.Empty;
-    public DateTime ExpectedStartDate { get; set; }
-    public int DurationWeeks { get; set; }
-    public List<CreateRoleCompositionDTO> RoleCompositions { get; set; } = new();
-}
+    public CreateProjectRequestValidator()
+    {
+        RuleFor(x => x.Name)
+            .NotEmpty().WithMessage("Nama project tidak boleh kosong");
 
-// DTOs/Response/ProjectResponseDTO.cs
-public class ProjectResponseDTO
-{
-    public Guid Id { get; set; }
-    public string Name { get; set; } = string.Empty;
-    public string ClientName { get; set; } = string.Empty;
-    public string Status { get; set; } = string.Empty;
-    public string Priority { get; set; } = string.Empty;
-    public DateTime ExpectedStartDate { get; set; }
-    public DateTime EstimatedEndDate { get; set; }
-    public int DurationWeeks { get; set; }
+        RuleFor(x => x.ClientName)
+            .NotEmpty().WithMessage("Nama client tidak boleh kosong");
+
+        RuleFor(x => x.DurationWeeks)
+            .GreaterThan(0).WithMessage("Durasi harus lebih dari 0 minggu");
+    }
 }
 ```
 
 ---
 
-## Business Rules yang Harus Diimplementasi di BE
+## 9. Entity Standards
 
-### Project
-- `estimated_end_date` = `expected_start_date + duration_weeks`
-- Saat GM assign tim → status otomatis berubah:
-  - `actual_start_date` = hari ini → status = `InProgress`
-  - `actual_start_date` di masa depan → status = `Scheduled`
-- Hanya Marketing yang bisa create project
-- GM dan Marketing bisa read semua project
-- PM hanya bisa read project yang di-assign ke dia
+```csharp
+public class Project
+{
+    [Key]
+    public Guid Id { get; set; }
 
-### Resource Assignment (GM)
-- Cek availability employee: tidak sedang assigned di project lain pada periode yang sama
-- Cek kontrak cukup: `contract_end_date >= project.estimated_end_date`
-- Jika kontrak tidak cukup → kirim notifikasi ke HR
-- Sort rekomendasi berdasarkan: availability dulu, lalu years_of_experience
+    [StringLength(200)]
+    public string Name { get; set; } = string.Empty;
 
-### Contract Extend
-- Tombol extend hanya muncul jika:
-  - `contract_type = contract` (bukan permanent)
-  - Ada request dari GM
-- HR yang eksekusi perpanjangan kontrak
+    [ForeignKey(nameof(CreatedByUser))]
+    public Guid CreatedBy { get; set; }
 
-### Notifications
-- Trigger notifikasi ke PM saat project di-assign
-- Trigger notifikasi ke GM saat PM submit change request
-- Trigger notifikasi ke HR saat GM request extend contract
-- Trigger notifikasi ke PM saat GM update project
+    public virtual User CreatedByUser { get; set; } = default!;
+
+    public virtual ICollection<ProjectMember> Members { get; set; } = new List<ProjectMember>();
+}
+```
+
+### Rules
+- Gunakan `[StringLength]` pada SEMUA string property
+- Gunakan Data Annotations (`[ForeignKey]`, `[InverseProperty]`)
+- Initialize navigation collections ke `new List<T>()`
+- Setiap perubahan entity WAJIB membuat EF Core migration baru
 
 ---
 
-## Migration Rules
-- Jangan pernah edit migration yang sudah ada
+## 10. Migration Rules
+- JANGAN pernah edit migration yang sudah ada
 - Selalu buat migration baru untuk setiap perubahan schema
 - Naming migration harus deskriptif:
 
 ```bash
 # Benar ✅
-dotnet ef migrations add AddActualStartDateToProjects
-dotnet ef migrations add CreateNotificationsTable
+dotnet ef migrations add AddActualStartDateToProjects --project ../RPS.Entities --startup-project .
+dotnet ef migrations add CreateNotificationsTable --project ../RPS.Entities --startup-project .
 
 # Salah ❌
 dotnet ef migrations add Update
@@ -409,81 +320,122 @@ dotnet ef migrations add Fix
 
 ---
 
-## API Endpoints Reference
+## 11. Business Rules
+
+### Project
+- `estimated_end_date` = `expected_start_date + duration_weeks * 7`
+- Status default saat create: `Unassigned`
+- Saat GM assign tim:
+  - `actual_start_date` = hari ini → status = `InProgress`
+  - `actual_start_date` di masa depan → status = `Scheduled`
+- Marketing dan GM bisa read semua project
+- PM hanya bisa read project yang `assigned_pm_id` = userId-nya
+
+### Resource Assignment (GM)
+- Cek availability employee: tidak sedang assigned di project lain di periode yang sama
+- Cek kontrak cukup: `contract_end_date >= project.estimated_end_date`
+- Jika kontrak tidak cukup → kirim notifikasi ke HR
+- Sort rekomendasi: availability dulu, lalu `years_of_experience`
+
+### Contract Extend
+- Tombol extend hanya muncul jika `contract_type = contract`
+- HR yang eksekusi setelah GM request
+
+---
+
+## 12. Environment & Credentials
+```
+Backend URL:   http://localhost:5052 (atau port yang di-assign)
+Database:      rps_db
+DB Username:   postgres
+DB Password:   (isi sendiri di appsettings.json lokal — JANGAN DI-COMMIT)
+```
+
+---
+
+## 13. API Endpoints Reference
 
 ### Auth
 ```
-POST /api/auth/register
-POST /api/auth/login
+POST /api/Auth/register   [AllowAnonymous]
+POST /api/Auth/login      [AllowAnonymous]
 ```
 
-### Projects
+### Project
 ```
-GET    /api/projects              # Get all (filter by role)
-GET    /api/projects/:id          # Get detail
-POST   /api/projects              # Create (Marketing only)
-PUT    /api/projects/:id          # Update (GM only)
-POST   /api/projects/:id/assign   # Assign team (GM only)
+POST /api/Project         [Authorize(Roles = "Marketing")]
+GET  /api/Project         [Authorize]
+GET  /api/Project/{id}    [Authorize]
+PUT  /api/Project/{id}    [Authorize(Roles = "GM")]
+POST /api/Project/{id}/assign [Authorize(Roles = "GM")]
 ```
 
 ### Dashboard
 ```
-GET /api/dashboard/stats          # Stats cards (total, per status)
+GET /api/Dashboard/stats  [Authorize]
 ```
 
 ### Change Requests
 ```
-GET  /api/change-requests         # Get all
-POST /api/change-requests         # Create (PM only)
-PUT  /api/change-requests/:id     # Approve/Reject (GM only)
+GET  /api/ChangeRequest         [Authorize]
+POST /api/ChangeRequest         [Authorize(Roles = "PM")]
+PUT  /api/ChangeRequest/{id}    [Authorize(Roles = "GM")]
 ```
 
 ### Users / Employees
 ```
-GET /api/users                    # Get all employees (HR, GM)
-GET /api/users/available          # Get available employees
+GET /api/User                   [Authorize(Roles = "HR,GM")]
+GET /api/User/available         [Authorize(Roles = "GM")]
 ```
 
 ### Contract
 ```
-GET  /api/contract-requests       # Get all requests
-POST /api/contract-requests       # Create request (GM only)
-PUT  /api/contract-requests/:id   # Process extend (HR only)
+GET  /api/ContractRequest       [Authorize]
+POST /api/ContractRequest       [Authorize(Roles = "GM")]
+PUT  /api/ContractRequest/{id}  [Authorize(Roles = "HR")]
 ```
 
 ### Notifications
 ```
-GET /api/notifications            # Get my notifications
-PUT /api/notifications/:id/read   # Mark as read
+GET /api/Notification           [Authorize]
+PUT /api/Notification/{id}/read [Authorize]
 ```
 
 ---
 
-## Do's & Don'ts
-
-### DO ✅
-- Selalu pakai DTO untuk request dan response
-- Selalu pakai try-catch di semua controller method
-- Selalu return ApiResponse format yang sudah ditentukan
-- Selalu validasi role di endpoint yang butuh permission khusus
-- Hash password sebelum disimpan ke database
-- Pakai async/await untuk semua database operation
-
-### DON'T ❌
-- Jangan expose entity/model langsung ke response
-- Jangan tulis business logic di controller
-- Jangan edit migration yang sudah ada
-- Jangan simpan password plain text
-- Jangan hardcode credentials di code — pakai appsettings.json
-- Jangan lupa CORS config saat test dari frontend
+## 14. Configuration Management
+- Centralize di `appsettings.json`
+- **JANGAN** hardcode connection string, API key, atau credentials di source code
+- `appsettings.json` sudah di-gitignore — setiap dev isi sendiri di lokal
+- Lihat contoh di `appsettings.example.json`
 
 ---
 
-## Git Commit Convention
+## 15. Do's & Don'ts
+
+### DO ✅
+- Satu class per file
+- Kelompokkan file per feature folder
+- Pakai async/await untuk semua database operation
+- Selalu buat validator untuk setiap command baru
+- Pakai DTO — jangan expose entity langsung ke response
+- Buat migration baru untuk setiap perubahan schema
+
+### DON'T ❌
+- Jangan tulis business logic di controller
+- Jangan expose entity langsung ke response
+- Jangan edit migration yang sudah ada
+- Jangan hardcode credentials
+- Jangan push `appsettings.json` ke repo
+- Jangan push langsung ke `main`
+
+---
+
+## 16. Git Commit Convention
 ```
 feat: menambahkan endpoint create project
 fix: memperbaiki validasi contract end date
-refactor: memindahkan logic ke ProjectService
+refactor: memindahkan logic ke RequestHandler
 chore: menambahkan migration untuk tabel notifications
 docs: update API endpoints di BACKEND.md
 ```
