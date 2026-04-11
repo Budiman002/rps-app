@@ -15,7 +15,16 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Search, Edit, Users, UserPlus, FileEdit, Eye, History } from "lucide-react";
+import {
+  Plus,
+  Search,
+  Edit,
+  Users,
+  UserPlus,
+  FileEdit,
+  Eye,
+  History,
+} from "lucide-react";
 import { ChangeRequestsSection } from "@/components/project-change-requests/change-requests-section";
 import {
   Dialog,
@@ -29,25 +38,30 @@ export function ProjectManagement() {
   const { projects, employees } = useData();
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedProjectIdForHistory, setSelectedProjectIdForHistory] = useState<string | null>(null);
+  const [selectedProjectIdForHistory, setSelectedProjectIdForHistory] =
+    useState<string | null>(null);
 
-  const selectedProjectForHistory = projects.find(p => p.Id === selectedProjectIdForHistory);
+  const selectedProjectForHistory = projects.find(
+    (p) => p.Id === selectedProjectIdForHistory,
+  );
 
   // Handle PM logic: Backend already filters projects by PM ID
   const allProjects = projects;
-  const unassignedProjects = projects.filter(p => p.Status === "Unassigned");
+  const unassignedProjects = projects.filter((p) => p.Status === "Unassigned");
 
   const filteredAllProjects = useMemo(() => {
-    return allProjects.filter(project =>
-      project.Name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      project.ClientName?.toLowerCase().includes(searchQuery.toLowerCase())
+    return allProjects.filter(
+      (project) =>
+        project.Name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        project.ClientName?.toLowerCase().includes(searchQuery.toLowerCase()),
     );
   }, [allProjects, searchQuery]);
 
   const filteredUnassignedProjects = useMemo(() => {
-    return unassignedProjects.filter(project =>
-      project.Name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      project.ClientName?.toLowerCase().includes(searchQuery.toLowerCase())
+    return unassignedProjects.filter(
+      (project) =>
+        project.Name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        project.ClientName?.toLowerCase().includes(searchQuery.toLowerCase()),
     );
   }, [unassignedProjects, searchQuery]);
 
@@ -80,14 +94,19 @@ export function ProjectManagement() {
     <TableRow key={project.Id}>
       <TableCell
         className="font-medium cursor-pointer hover:text-blue-600"
-        onClick={() => navigate(`/app/projects/${project.Id}`, { state: { from: '/app/projects' } })}
+        onClick={() =>
+          navigate(`/app/projects/${project.Id}`, {
+            state: { from: "/app/projects" },
+          })
+        }
       >
         {project.Name}
       </TableCell>
       <TableCell>{project.ClientName}</TableCell>
       <TableCell>{getStatusBadge(project.Status)}</TableCell>
       <TableCell>
-        {formatDate(project.ActualStartDate || project.ExpectedStartDate)} - {formatDate(project.EndDate || project.EstimatedEndDate)}
+        {formatDate(project.ActualStartDate || project.ExpectedStartDate)} -{" "}
+        {formatDate(project.EndDate || project.EstimatedEndDate)}
       </TableCell>
       <TableCell>{project.DurationWeeks}w</TableCell>
       <TableCell>
@@ -95,15 +114,27 @@ export function ProjectManagement() {
           <Users className="h-4 w-4 text-gray-400" />
           <span>
             {project.Members?.length || 0}/
-            {project.RoleCompositions?.reduce((sum, t) => sum + t.Quantity, 0) || 0}
+            {project.RoleCompositions?.reduce(
+              (sum, t) => sum + t.Quantity,
+              0,
+            ) || 0}
           </span>
         </div>
       </TableCell>
-      {(user?.role === "GM" || user?.role === "Marketing") && (
+      {user?.role === "GM" && (
         <TableCell>
-          {project.RequestChanges && project.RequestChanges.filter((r) => r.Status === "pending").length > 0 ? (
-            <Badge variant="outline" className="text-orange-600 border-orange-600">
-              {project.RequestChanges.filter((r) => r.Status === "pending").length} Pending
+          {project.RequestChanges &&
+          project.RequestChanges.filter((r) => r.Status === "pending").length >
+            0 ? (
+            <Badge
+              variant="outline"
+              className="text-orange-600 border-orange-600"
+            >
+              {
+                project.RequestChanges.filter((r) => r.Status === "pending")
+                  .length
+              }{" "}
+              Pending
             </Badge>
           ) : (
             <span className="text-gray-400">-</span>
@@ -115,7 +146,11 @@ export function ProjectManagement() {
           {showAssignButton && user?.role === "GM" ? (
             <Button
               size="sm"
-              onClick={() => navigate(`/app/projects/${project.Id}/assign`, { state: { from: '/app/projects' } })}
+              onClick={() =>
+                navigate(`/app/projects/${project.Id}/assign`, {
+                  state: { from: "/app/projects" },
+                })
+              }
               className="gap-2"
             >
               <UserPlus className="h-4 w-4" />
@@ -123,23 +158,25 @@ export function ProjectManagement() {
             </Button>
           ) : (
             <>
-              {user?.role === "PM" && (project.Status === "Scheduled" || project.Status === "InProgress") && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() =>
-                    navigate(`/app/projects/${project.Id}`, {
-                      state: {
-                        from: "/app/projects",
-                        openRequestModal: true,
-                      },
-                    })
-                  }
-                  title="Request Change"
-                >
-                  <FileEdit className="h-4 w-4 text-orange-600" />
-                </Button>
-              )}
+              {user?.role === "PM" &&
+                (project.Status === "Scheduled" ||
+                  project.Status === "InProgress") && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() =>
+                      navigate(`/app/projects/${project.Id}`, {
+                        state: {
+                          from: "/app/projects",
+                          openRequestModal: true,
+                        },
+                      })
+                    }
+                    title="Request Change"
+                  >
+                    <FileEdit className="h-4 w-4 text-orange-600" />
+                  </Button>
+                )}
               {user?.role === "PM" && (
                 <Button
                   variant="ghost"
@@ -153,7 +190,11 @@ export function ProjectManagement() {
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => navigate(`/app/projects/${project.Id}`, { state: { from: '/app/projects' } })}
+                onClick={() =>
+                  navigate(`/app/projects/${project.Id}`, {
+                    state: { from: "/app/projects" },
+                  })
+                }
                 title="View Details"
               >
                 <Eye className="h-4 w-4" />
@@ -162,7 +203,11 @@ export function ProjectManagement() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => navigate(`/app/projects/${project.Id}/edit`, { state: { from: '/app/projects' } })}
+                  onClick={() =>
+                    navigate(`/app/projects/${project.Id}/edit`, {
+                      state: { from: "/app/projects" },
+                    })
+                  }
                   title="Edit Project"
                 >
                   <Edit className="h-4 w-4" />
@@ -183,7 +228,7 @@ export function ProjectManagement() {
             {user?.role === "PM" ? "My Projects" : "Project Management"}
           </h1>
           <p className="text-gray-500 mt-1">
-            {user?.role === "PM" 
+            {user?.role === "PM"
               ? "View and manage your assigned projects"
               : "Manage all projects and assignments"}
           </p>
@@ -201,7 +246,10 @@ export function ProjectManagement() {
           )}
         </div>
         {user?.role === "Marketing" && (
-          <Button onClick={() => navigate("/app/projects/new")} className="gap-2">
+          <Button
+            onClick={() => navigate("/app/projects/new")}
+            className="gap-2"
+          >
             <Plus className="h-4 w-4" />
             Add Project
           </Button>
@@ -209,7 +257,6 @@ export function ProjectManagement() {
       </div>
 
       <Tabs defaultValue="all" className="w-full">
-
         <TabsContent value="all" className="mt-6">
           <Card>
             <CardHeader>
@@ -242,24 +289,24 @@ export function ProjectManagement() {
                       <TableHead>Start - End Date</TableHead>
                       <TableHead>Duration</TableHead>
                       <TableHead>Team Members</TableHead>
-                      {(user?.role === "GM" || user?.role === "Marketing") && (
-                        <TableHead>Requests</TableHead>
-                      )}
+                      {user?.role === "GM" && <TableHead>Requests</TableHead>}
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredAllProjects.length === 0 ? (
                       <TableRow>
-                        <TableCell 
-                          colSpan={user?.role === "PM" ? 7 : 8} 
+                        <TableCell
+                          colSpan={user?.role === "PM" ? 7 : 8}
                           className="text-center py-8 text-gray-500"
                         >
                           No projects found
                         </TableCell>
                       </TableRow>
                     ) : (
-                      filteredAllProjects.map(project => renderProjectRow(project))
+                      filteredAllProjects.map((project) =>
+                        renderProjectRow(project),
+                      )
                     )}
                   </TableBody>
                 </Table>
@@ -303,12 +350,17 @@ export function ProjectManagement() {
                     <TableBody>
                       {filteredUnassignedProjects.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                          <TableCell
+                            colSpan={7}
+                            className="text-center py-8 text-gray-500"
+                          >
                             No unassigned projects
                           </TableCell>
                         </TableRow>
                       ) : (
-                        filteredUnassignedProjects.map(project => renderProjectRow(project, true))
+                        filteredUnassignedProjects.map((project) =>
+                          renderProjectRow(project, true),
+                        )
                       )}
                     </TableBody>
                   </Table>
@@ -320,14 +372,19 @@ export function ProjectManagement() {
       </Tabs>
 
       {/* Request History Dialog */}
-      <Dialog open={!!selectedProjectIdForHistory} onOpenChange={(open) => !open && setSelectedProjectIdForHistory(null)}>
+      <Dialog
+        open={!!selectedProjectIdForHistory}
+        onOpenChange={(open) => !open && setSelectedProjectIdForHistory(null)}
+      >
         <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Request History - {selectedProjectForHistory?.Name}</DialogTitle>
+            <DialogTitle>
+              Request History - {selectedProjectForHistory?.Name}
+            </DialogTitle>
           </DialogHeader>
           <div className="mt-4">
-            <ChangeRequestsSection 
-              requests={selectedProjectForHistory?.RequestChanges || []} 
+            <ChangeRequestsSection
+              requests={selectedProjectForHistory?.RequestChanges || []}
               employees={employees}
               canManage={false}
             />
@@ -337,4 +394,3 @@ export function ProjectManagement() {
     </div>
   );
 }
-
