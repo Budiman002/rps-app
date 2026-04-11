@@ -1,14 +1,14 @@
 import { useState, useMemo, useEffect } from "react";
 import { useParams, useNavigate, useLocation } from "react-router";
 import { useAuth } from "@/contexts/auth-context";
-import { useData, TeamMember } from "@/contexts/data-context";
+import { useData, ProjectMember } from "@/contexts/data-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { ArrowLeft, Users, AlertTriangle, Calendar, Sparkles } from "lucide-react";
+import { ArrowLeft, AlertTriangle, Calendar, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
@@ -35,7 +35,7 @@ export function AssignMembers() {
     );
   }
 
-  if (user?.role !== "gm") {
+  if (user?.role !== "GM") {
     return (
       <div className="text-center py-12">
         <h2 className="text-2xl font-bold mb-2">Access Denied</h2>
@@ -47,19 +47,20 @@ export function AssignMembers() {
 
   // Generate unique keys for each role requirement
   const roleRequirements = useMemo(() => {
-    return project.teamComposition.flatMap((comp, compIndex) =>
-      Array.from({ length: comp.count }, (_, index) => ({
-        key: `${comp.role}-${comp.seniority}-${compIndex}-${index}`,
-        role: comp.role,
-        seniority: comp.seniority,
+    return project.roleCompositions.flatMap((comp, compIndex) =>
+      Array.from({ length: comp.quantity }, (_, index) => ({
+        key: `${comp.id || compIndex}-${index}`,
+        roleTitle: comp.roleTitle,
+        seniorityLevel: comp.seniorityLevel,
+        roleCompositionId: comp.id,
       }))
     );
   }, [project]);
 
   // Filter available employees for each role based on start date
-  const getAvailableEmployees = (role: string, seniority: string, startDate?: string) => {
+  const getAvailableEmployees = (roleTitle: string, seniorityLevel: string, startDate?: string) => {
     return employees.filter((emp) => {
-      if (emp.role !== role || emp.seniority !== seniority) return false;
+      if (emp.jobTitle !== roleTitle || emp.seniorityLevel !== seniorityLevel) return false;
 
       // If employee is not dedicated, they're available
       if (!emp.isDedicated) return true;
@@ -82,20 +83,20 @@ export function AssignMembers() {
   // Check resource availability and calculate recommended start date
   const resourceAvailability = useMemo(() => {
     const unavailableRoles: Array<{
-      role: string;
-      seniority: string;
+      roleTitle: string;
+      seniorityLevel: string;
       availableDate: string;
       dedicatedEmployees: string[];
     }> = [];
 
     roleRequirements.forEach((req) => {
-      const available = getAvailableEmployees(req.role, req.seniority);
+      const available = getAvailableEmployees(req.roleTitle, req.seniorityLevel);
       if (available.length === 0) {
         // Find dedicated employees with this role/seniority
         const dedicated = employees.filter(
           (emp) =>
-            emp.role === req.role &&
-            emp.seniority === req.seniority &&
+            emp.jobTitle === req.roleTitle &&
+            emp.seniorityLevel === req.seniorityLevel &&
             emp.isDedicated
         );
 
@@ -104,7 +105,7 @@ export function AssignMembers() {
           .map((emp) => {
             const empProject = projects.find((p) => p.id === emp.currentProject || p.name === emp.currentProject);
             return {
-              employee: emp.name,
+              employee: emp.fullName,
               endDate: empProject?.endDate || empProject?.estimatedEndDate,
             };
           })
@@ -119,10 +120,10 @@ export function AssignMembers() {
 
         if (earliestDate) {
           unavailableRoles.push({
-            role: req.role,
-            seniority: req.seniority,
+            roleTitle: req.roleTitle,
+            seniorityLevel: req.seniorityLevel,
             availableDate: earliestDate,
-            dedicatedEmployees: dedicated.map((e) => e.name),
+            dedicatedEmployees: dedicated.map((e) => e.fullName),
           });
         }
       }
@@ -171,7 +172,7 @@ export function AssignMembers() {
     roleRequirements.forEach((req) => {
       // Get all employees matching role and seniority, considering the start date
       let availableEmployees = employees.filter((emp) => {
-        if (emp.role !== req.role || emp.seniority !== req.seniority) return false;
+        if (emp.jobTitle !== req.roleTitle || emp.seniorityLevel !== req.seniorityLevel) return false;
         if (assignedEmployeeIds.has(emp.id)) return false;
 
         // If employee is not dedicated, they're available
@@ -214,7 +215,7 @@ export function AssignMembers() {
     // Calculate new estimated end date
     const startDate = new Date(newStartDate);
     const endDate = new Date(startDate);
-    endDate.setDate(endDate.getDate() + project.duration * 7);
+    endDate.setDate(endDate.getDate() + project.durationWeeks * 7);
     const newEndDate = endDate.toISOString().split("T")[0];
 
     updateProject(project.id, {
@@ -262,34 +263,41 @@ export function AssignMembers() {
 
     setLoading(true);
     try {
-      const teamMembers: TeamMember[] = roleRequirements.map((req) => ({
-        id: `TM${Date.now()}-${Math.random()}`,
-        employeeId: assignments[req.key],
-        role: req.role,
-        seniority: req.seniority,
-      }));
+      const projectMembers: ProjectMember[] = roleRequirements.map((req) => {
+        const emp = employees.find(e => e.id === assignments[req.key])!;
+        return {
+          id: `TM${Date.now()}-${Math.random()}`,
+          employeeId: emp.id,
+          fullName: emp.fullName,
+          email: emp.email,
+          jobTitle: emp.jobTitle,
+          seniorityLevel: emp.seniorityLevel,
+          roleCompositionId: req.roleCompositionId || "",
+          roleTitle: req.roleTitle,
+        };
+      });
 
       // Find PM in assignments
-      const pmAssignment = roleRequirements.find((req) => req.role === "Project Manager");
+      const pmAssignment = roleRequirements.find((req) => req.roleTitle === "Project Manager");
       const pmId = pmAssignment ? assignments[pmAssignment.key] : "";
 
       // Calculate end date based on actual start date
       const startDate = new Date(actualStartDate);
       const endDate = new Date(startDate);
-      endDate.setDate(endDate.getDate() + project.duration * 7);
+      endDate.setDate(endDate.getDate() + project.durationWeeks * 7);
       const actualEndDate = endDate.toISOString().split("T")[0];
 
       // Update project with actual dates first
       updateProject(project.id, {
-        startDate: actualStartDate,
+        actualStartDate: actualStartDate,
         endDate: actualEndDate,
       });
 
-      // Then assign team members
-      assignMembers(project.id, teamMembers, pmId);
+      // Then assign project members
+      assignMembers(project.id, projectMembers, pmId);
 
       const today = new Date().toISOString().split("T")[0];
-      const statusText = actualStartDate > today ? "Scheduled" : "In Progress";
+      const statusText = actualStartDate > today ? "scheduled" : "in-progress";
 
       toast.success("Team members assigned successfully", {
         description: `Project status updated to ${statusText}`,
@@ -322,7 +330,7 @@ export function AssignMembers() {
           <CardHeader>
             <CardTitle>{project.name}</CardTitle>
             <CardDescription>
-              Client: {project.clientName} • Duration: {project.duration} weeks
+              Client: {project.clientName} • Duration: {project.durationWeeks} weeks
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -406,7 +414,7 @@ export function AssignMembers() {
                       {resourceAvailability.unavailableRoles.map((unavailable, idx) => (
                         <div key={idx} className="text-xs bg-white/50 p-2 rounded border border-red-200">
                           <div className="font-medium">
-                            {unavailable.seniority} {unavailable.role}
+                            {unavailable.seniorityLevel} {unavailable.roleTitle}
                           </div>
                           <div className="text-gray-600 mt-1">
                             Available after: {new Date(unavailable.availableDate).toLocaleDateString()}
@@ -456,16 +464,16 @@ export function AssignMembers() {
 
             <div className="space-y-4">
               {roleRequirements.map((req, index) => {
-                const availableEmployees = getAvailableEmployees(req.role, req.seniority, actualStartDate);
+                const availableEmployees = getAvailableEmployees(req.roleTitle, req.seniorityLevel, actualStartDate);
                 const selectedEmployeeId = assignments[req.key];
 
                 return (
                   <div key={req.key} className="p-4 border rounded-lg space-y-3">
                     <div className="flex items-center justify-between">
                       <div>
-                        <div className="font-medium">{req.role}</div>
+                        <div className="font-medium">{req.roleTitle}</div>
                         <Badge variant="outline" className="mt-1 capitalize">
-                          {req.seniority}
+                          {req.seniorityLevel}
                         </Badge>
                       </div>
                       <div className="text-sm text-gray-500">
@@ -498,7 +506,7 @@ export function AssignMembers() {
                           ) : (
                             availableEmployees.map((emp) => (
                               <SelectItem key={emp.id} value={emp.id}>
-                                {emp.name} - {emp.email}
+                                {emp.fullName} - {emp.email}
                               </SelectItem>
                             ))
                           )}
@@ -506,7 +514,7 @@ export function AssignMembers() {
                       </Select>
                       {availableEmployees.length === 0 && (
                         <p className="text-xs text-red-500">
-                          No {req.seniority} {req.role} available. Consider reassigning resources.
+                          No {req.seniorityLevel} {req.roleTitle} available. Consider reassigning resources.
                         </p>
                       )}
                     </div>
@@ -523,7 +531,7 @@ export function AssignMembers() {
                 <li>You can manually override both the start date and team assignments</li>
                 <li>Assigned employees will be marked as dedicated to this project</li>
                 <li>The Project Manager will receive a notification</li>
-                <li>Project status will be "Scheduled" if start date is in the future, or "In Progress" if today or past</li>
+                <li>Project status will be "scheduled" if start date is in the future, or "in-progress" if today or past</li>
               </ul>
             </div>
           </CardContent>
