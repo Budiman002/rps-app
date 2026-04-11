@@ -59,7 +59,7 @@ public class ProjectController : ControllerBase
 
     private Guid GetUserId()
     {
-        var idClaim = User.FindFirstValue("id");
+        var idClaim = User.FindFirstValue("id") ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
         return Guid.TryParse(idClaim, out var userId) ? userId : Guid.Empty;
     }
 
