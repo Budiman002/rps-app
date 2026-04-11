@@ -93,6 +93,17 @@ export function ProjectDetail() {
     return employees.find(e => e.Id === employeeId);
   };
 
+  const formatToDDMMYYYY = (isoString?: string) => {
+    if (!isoString) return "Not set";
+    const datePart = isoString.split("T")[0];
+    if (!datePart) return "Not set";
+    const parts = datePart.split("-");
+    if (parts.length === 3) {
+      return `${parts[2]}-${parts[1]}-${parts[0]}`;
+    }
+    return datePart;
+  };
+
   // Check if current user is the PM of this project
   const pmEmployee = employees.find(e => e.Email === user?.email);
   const isPM = user?.role === "PM" && project.AssignedPmId === pmEmployee?.Id;
@@ -144,14 +155,14 @@ export function ProjectDetail() {
               </>
             )}
             {user?.role === "GM" && (
-                <Button
-                  onClick={() => navigate(`/app/projects/${project.Id}/edit`, { state: { from: location.state?.from } })}
-                  className="gap-2"
-                >
-                  <Edit className="h-4 w-4" />
-                  Edit Project
-                </Button>
-              )}
+              <Button
+                onClick={() => navigate(`/app/projects/${project.Id}/edit`, { state: { from: location.state?.from } })}
+                className="gap-2"
+              >
+                <Edit className="h-4 w-4" />
+                Edit Project
+              </Button>
+            )}
           </div>
         </div>
       </div>
@@ -182,7 +193,7 @@ export function ProjectDetail() {
               <div>
                 <div className="text-sm text-gray-500">Start Date</div>
                 <div className="font-medium">
-                  {project.ActualStartDate || project.ExpectedStartDate || "Not set"}
+                  {formatToDDMMYYYY(project.ActualStartDate || project.ExpectedStartDate)}
                 </div>
               </div>
             </div>
@@ -191,7 +202,7 @@ export function ProjectDetail() {
               <div>
                 <div className="text-sm text-gray-500">End Date</div>
                 <div className="font-medium">
-                  {project.EndDate || project.EstimatedEndDate || "Not set"}
+                  {formatToDDMMYYYY(project.EndDate || project.EstimatedEndDate)}
                 </div>
               </div>
             </div>
@@ -353,8 +364,8 @@ export function ProjectDetail() {
             <DialogTitle>Request History - {project.Name}</DialogTitle>
           </DialogHeader>
           <div className="mt-4">
-            <ChangeRequestsSection 
-              requests={project.RequestChanges || []} 
+            <ChangeRequestsSection
+              requests={project.RequestChanges || []}
               employees={employees}
               canManage={false}
             />

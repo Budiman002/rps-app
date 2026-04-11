@@ -183,7 +183,7 @@ export function ProjectManagement() {
             {user?.role === "PM" ? "My Projects" : "Project Management"}
           </h1>
           <p className="text-gray-500 mt-1">
-            {user?.role === "PM" 
+            {user?.role === "PM"
               ? "View and manage your assigned projects"
               : "Manage all projects and assignments"}
           </p>
@@ -251,8 +251,8 @@ export function ProjectManagement() {
                   <TableBody>
                     {filteredAllProjects.length === 0 ? (
                       <TableRow>
-                        <TableCell 
-                          colSpan={user?.role === "PM" ? 7 : 8} 
+                        <TableCell
+                          colSpan={user?.role === "PM" ? 7 : 8}
                           className="text-center py-8 text-gray-500"
                         >
                           No projects found
@@ -326,8 +326,8 @@ export function ProjectManagement() {
             <DialogTitle>Request History - {selectedProjectForHistory?.Name}</DialogTitle>
           </DialogHeader>
           <div className="mt-4">
-            <ChangeRequestsSection 
-              requests={selectedProjectForHistory?.RequestChanges || []} 
+            <ChangeRequestsSection
+              requests={selectedProjectForHistory?.RequestChanges || []}
               employees={employees}
               canManage={false}
             />

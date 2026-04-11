@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { ChangeRequest, Employee } from "@/contexts/data-context";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Badge } from "../ui/badge";
@@ -48,49 +49,107 @@ export function ChangeRequestsSection({
     }
   };
 
-  const getTypeBadge = (type: string) => {
-    switch (type) {
-      case "Timeline":
-        return (
-          <Badge variant="secondary" className="gap-1">
-            <Calendar className="h-3 w-3" />
-            Timeline
-          </Badge>
-        );
-      case "Roles":
-        return (
-          <Badge variant="secondary" className="gap-1">
-            <Briefcase className="h-3 w-3" />
-            Roles
-          </Badge>
-        );
-      case "Team":
-        return (
-          <Badge variant="secondary" className="gap-1">
-            <Users className="h-3 w-3" />
-            Team Members
-          </Badge>
-        );
-      default:
-        return <Badge variant="secondary">{type}</Badge>;
+  const getTypeBadge = (request: ChangeRequest) => {
+    const badges = [];
+
+    // Check if timeline changes were included
+    if (request.NewStartDate || request.NewEndDate || request.NewDurationWeeks) {
+      badges.push(<Badge key="Timeline" variant="secondary" className="gap-1"><Calendar className="h-3 w-3" />Timeline</Badge>);
     }
+    
+    // Check if role changes were included
+    if (request.RoleChangesJson) {
+      badges.push(<Badge key="Roles" variant="secondary" className="gap-1"><Briefcase className="h-3 w-3" />Roles</Badge>);
+    }
+    
+    // Check if member changes were included
+    if (request.MemberChangesJson) {
+      badges.push(<Badge key="Team Members" variant="secondary" className="gap-1"><Users className="h-3 w-3" />Team Members</Badge>);
+    }
+
+    // Fallback just in case
+    if (badges.length === 0 && request.RequestType) {
+      badges.push(<Badge key={request.RequestType} variant="secondary">{request.RequestType}</Badge>);
+    }
+
+    return (
+      <div className="flex gap-1 flex-wrap">
+        {badges}
+      </div>
+    );
   };
 
   const getEmployeeName = (employeeId: string) => {
     return employees.find(e => e.Id === employeeId)?.FullName || "Unknown";
   };
 
-  const formatDate = (value: string) => {
+  const formatDateTime = (value: string) => {
     if (!value) return "-";
-    const parts = value.split("T");
-    const dateOnly = parts[0];
-    if (!dateOnly) return "-";
-    const [year, month, day] = dateOnly.split("-").map(Number);
-    if (year === undefined || month === undefined || day === undefined || isNaN(year) || isNaN(month) || isNaN(day)) return value;
-    const date = new Date(year, month - 1, day);
+    const date = new Date(value);
     if (isNaN(date.getTime())) return value;
-    return date.toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" }).replace(/\//g, "-");
+    
+    // Fallback if value only has date, no time (length 10)
+    if (value.length <= 10) {
+      const d = String(date.getDate()).padStart(2, '0');
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const y = date.getFullYear();
+      return `${d}-${m}-${y}`;
+    }
+
+    try {
+      const formatter = new Intl.DateTimeFormat("en-GB", {
+        timeZone: "Asia/Jakarta",
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false
+      });
+      
+      const parts = formatter.formatToParts(date);
+      const day = parts.find(p => p.type === 'day')?.value || "01";
+      const month = parts.find(p => p.type === 'month')?.value || "01";
+      const year = parts.find(p => p.type === 'year')?.value || "1970";
+      const hour = parts.find(p => p.type === 'hour')?.value || "00";
+      const minute = parts.find(p => p.type === 'minute')?.value || "00";
+      const second = parts.find(p => p.type === 'second')?.value || "00";
+      
+      return `${day}-${month}-${year} ${hour}:${minute}:${second}`;
+    } catch {
+      return formatDateOnly(value);
+    }
   };
+
+  const formatDateOnly = (value: string) => {
+    if (!value) return "-";
+    const date = new Date(value);
+    if (isNaN(date.getTime())) return value;
+    const d = String(date.getDate()).padStart(2, '0');
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const y = date.getFullYear();
+    return `${d}-${m}-${y}`;
+  };
+
+  const [activeFilters, setActiveFilters] = useState<string[]>(["Pending"]);
+
+  const toggleFilter = (status: string) => {
+    setActiveFilters(prev => 
+      prev.includes(status) 
+        ? prev.filter(s => s !== status)
+        : [...prev, status]
+    );
+  };
+
+  const sortedRequests = [...requests].sort((a, b) => {
+    return new Date(b.CreatedAt).getTime() - new Date(a.CreatedAt).getTime();
+  });
+
+  const filteredRequests = sortedRequests.filter(req => {
+    if (activeFilters.length === 0) return false;
+    return activeFilters.includes(req.Status);
+  });
 
   if (requests.length === 0) {
     return (
@@ -110,22 +169,56 @@ export function ChangeRequestsSection({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Change Requests</CardTitle>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <CardTitle>Change Requests</CardTitle>
+          <div className="flex gap-2 bg-slate-100 p-1 rounded-md">
+            <Button
+              variant={activeFilters.includes("Pending") ? "default" : "ghost"}
+              size="sm"
+              onClick={() => toggleFilter("Pending")}
+              className="text-xs h-8"
+            >
+              Pending
+            </Button>
+            <Button
+              variant={activeFilters.includes("Approved") ? "default" : "ghost"}
+              size="sm"
+              onClick={() => toggleFilter("Approved")}
+              className="text-xs h-8"
+              style={activeFilters.includes("Approved") ? { backgroundColor: "#10b981" } : {}}
+            >
+              Approved
+            </Button>
+            <Button
+              variant={activeFilters.includes("Rejected") ? "default" : "ghost"}
+              size="sm"
+              onClick={() => toggleFilter("Rejected")}
+              className="text-xs h-8"
+              style={activeFilters.includes("Rejected") ? { backgroundColor: "#ef4444" } : {}}
+            >
+              Rejected
+            </Button>
+          </div>
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {requests.map((request, index) => (
-          <div key={request.Id}>
-            {index > 0 && <Separator className="my-4" />}
+        {filteredRequests.length === 0 ? (
+          <div className="text-center py-6 text-gray-400">
+            No requests found for selected filters.
+          </div>
+        ) : (
+          filteredRequests.map((request) => (
+            <div key={request.Id} className="border-2 border-slate-200 rounded-lg p-5 space-y-4 shadow-sm bg-white mb-4 last:mb-0">
             <div className="space-y-3">
               <div className="flex items-start justify-between">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
                     <h4 className="font-medium">{request.ChangeTitle}</h4>
-                    {getTypeBadge(request.RequestType)}
+                    {getTypeBadge(request)}
                     {getStatusBadge(request.Status)}
                   </div>
                   <p className="text-sm text-gray-500">
-                    Requested on {formatDate(request.CreatedAt)}
+                    Requested on {formatDateTime(request.CreatedAt)}
                   </p>
                 </div>
                 {canManage && request.Status === "Pending" && (
@@ -161,11 +254,11 @@ export function ChangeRequestsSection({
                   <div className="grid grid-cols-2 gap-3 text-sm">
                     <div>
                       <p className="text-gray-500">New Start Date:</p>
-                      <p className="font-medium">{formatDate(request.NewStartDate)}</p>
+                      <p className="font-medium">{formatDateOnly(request.NewStartDate)}</p>
                     </div>
                     <div>
                       <p className="text-gray-500">New End Date:</p>
-                      <p className="font-medium">{formatDate(request.NewEndDate || "")}</p>
+                      <p className="font-medium">{formatDateOnly(request.NewEndDate || "")}</p>
                     </div>
                     {request.NewDurationWeeks && (
                       <div>
@@ -192,7 +285,7 @@ export function ChangeRequestsSection({
                               <ul className="list-disc list-inside text-sm">
                                 {roles.added.map((role: any, idx: number) => (
                                   <li key={idx}>
-                                    {role.role} ({role.seniority}) × {role.count}
+                                    {role.role} ({role.seniority}) {role.allocationType ? `- ${role.allocationType === "parallel" ? "Parallel" : "Dedicated"} ` : ""}× {role.count}
                                   </li>
                                 ))}
                               </ul>
@@ -204,7 +297,7 @@ export function ChangeRequestsSection({
                               <ul className="list-disc list-inside text-sm">
                                 {roles.removed.map((role: any, idx: number) => (
                                   <li key={idx}>
-                                    {role.role} ({role.seniority}) × {role.count}
+                                    {role.role} ({role.seniority}) {role.allocationType ? `- ${role.allocationType === "parallel" ? "Parallel" : "Dedicated"} ` : ""}× {role.count}
                                   </li>
                                 ))}
                               </ul>
@@ -262,7 +355,7 @@ export function ChangeRequestsSection({
               )}
             </div>
           </div>
-        ))}
+        )))}
       </CardContent>
     </Card>
   );
