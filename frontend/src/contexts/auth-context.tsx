@@ -58,15 +58,25 @@ function toUserRole(role: string): UserRole {
 
 async function parseErrorMessage(response: Response): Promise<string> {
   try {
-    const payload = (await response.json()) as {
-      message?: string;
-      title?: string;
-      error?: string;
-    };
+    const payload = (await response.json()) as any;
+
+    // Handle validation errors array from BE (can be PascalCase or camelCase)
+    const errors = payload?.errors || payload?.Errors;
+    if (Array.isArray(errors) && errors.length > 0) {
+      const firstError = errors[0];
+      return (
+        firstError?.ErrorMessage ??
+        firstError?.errorMessage ??
+        "Validation failed"
+      );
+    }
+
     return (
-      payload.message ??
-      payload.title ??
-      payload.error ??
+      payload?.message ??
+      payload?.Message ??
+      payload?.title ??
+      payload?.Title ??
+      payload?.error ??
       `Request failed with status ${response.status}`
     );
   } catch {
