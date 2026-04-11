@@ -22,7 +22,7 @@ public class CreateChangeRequestRequestHandler : IRequestHandler<CreateChangeReq
             RequestedBy = request.RequestedBy,
             ChangeTitle = request.ChangeTitle,
             ChangeDescription = request.ChangeDescription,
-            RequestType = Enum.Parse<ChangeRequestType>(request.RequestType),
+            RequestType = Enum.Parse<ChangeRequestType>(request.RequestType, true),
             NewStartDate = request.NewStartDate,
             NewEndDate = request.NewEndDate,
             NewDurationWeeks = request.NewDurationWeeks,

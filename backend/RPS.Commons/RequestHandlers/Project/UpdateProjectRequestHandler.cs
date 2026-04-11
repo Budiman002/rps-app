@@ -17,6 +17,14 @@ public class UpdateProjectRequestHandler : IRequestHandler<UpdateProjectRequest,
 
     public async Task<Unit> Handle(UpdateProjectRequest request, CancellationToken cancellationToken)
     {
+        if (request.UpdatedBy == Guid.Empty)
+        {
+            throw new ValidationException(new[]
+            {
+                new FluentValidation.Results.ValidationFailure(nameof(request.UpdatedBy), "User ID dari token tidak valid atau tidak ditemukan.")
+            });
+        }
+
         var project = await _context.Projects
             .Include(p => p.RoleCompositions)
             .Include(p => p.Members)
@@ -64,7 +72,7 @@ public class UpdateProjectRequestHandler : IRequestHandler<UpdateProjectRequest,
         }
 
         if (!string.IsNullOrEmpty(request.NewStatus))
-            project.Status = Enum.Parse<ProjectStatus>(request.NewStatus);
+            project.Status = Enum.Parse<ProjectStatus>(request.NewStatus, true);
 
         project.UpdatedAt = DateTime.UtcNow;
 
@@ -97,8 +105,8 @@ public class UpdateProjectRequestHandler : IRequestHandler<UpdateProjectRequest,
             if (existing != null)
             {
                 existing.RoleTitle = incoming.RoleTitle;
-                existing.SeniorityLevel = Enum.Parse<SeniorityLevel>(incoming.SeniorityLevel);
-                existing.EmploymentStatus = Enum.Parse<EmploymentStatus>(incoming.EmploymentStatus);
+                existing.SeniorityLevel = Enum.Parse<SeniorityLevel>(incoming.SeniorityLevel, true);
+                existing.EmploymentStatus = Enum.Parse<EmploymentStatus>(incoming.EmploymentStatus, true);
                 existing.Quantity = incoming.Quantity;
                 existing.UpdatedAt = DateTime.UtcNow;
             }
@@ -108,8 +116,8 @@ public class UpdateProjectRequestHandler : IRequestHandler<UpdateProjectRequest,
                 {
                     ProjectId = project.Id,
                     RoleTitle = incoming.RoleTitle,
-                    SeniorityLevel = Enum.Parse<SeniorityLevel>(incoming.SeniorityLevel),
-                    EmploymentStatus = Enum.Parse<EmploymentStatus>(incoming.EmploymentStatus),
+                    SeniorityLevel = Enum.Parse<SeniorityLevel>(incoming.SeniorityLevel, true),
+                    EmploymentStatus = Enum.Parse<EmploymentStatus>(incoming.EmploymentStatus, true),
                     Quantity = incoming.Quantity,
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow

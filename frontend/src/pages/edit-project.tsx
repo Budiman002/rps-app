@@ -26,7 +26,7 @@ export function EditProject() {
     id: string; // GUID or temp
     roleTitle: string; 
     seniorityLevel: Seniority; 
-    employmentStatus: "dedicated" | "parallel"; 
+    employmentStatus: "Dedicated" | "Parallel"; 
     quantity: number 
   };
   
@@ -132,7 +132,7 @@ export function EditProject() {
       id: crypto.randomUUID(), 
       roleTitle: "", 
       seniorityLevel: "Junior", 
-      employmentStatus: "dedicated", 
+      employmentStatus: "Dedicated", 
       quantity: 1 
     }]);
   };
@@ -179,16 +179,14 @@ export function EditProject() {
     setTeamMembers(teamMembers.filter((_, i) => i !== index));
   };
 
-  const handleTeamMemberChange = <K extends keyof ProjectMember>(
-    index: number,
-    field: K,
-    value: ProjectMember[K],
-  ) => {
-    const updatedMembers = [...teamMembers];
-    if (updatedMembers[index]) {
-      updatedMembers[index] = { ...updatedMembers[index], [field]: value };
-      setTeamMembers(updatedMembers);
-    }
+  const handleTeamMemberChange = (index: number, updates: Partial<ProjectMember>) => {
+    setTeamMembers(prev => {
+      const updated = [...prev];
+      if (updated[index]) {
+        updated[index] = { ...updated[index], ...updates };
+      }
+      return updated;
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -409,14 +407,14 @@ export function EditProject() {
                             <Label>Allocation</Label>
                             <Select
                               value={role.employmentStatus}
-                              onValueChange={(value) => handleRoleChange(index, "employmentStatus", value as "dedicated" | "parallel")}
+                              onValueChange={(value) => handleRoleChange(index, "employmentStatus", value as "Dedicated" | "Parallel")}
                             >
                               <SelectTrigger>
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="dedicated">Dedicated (100%)</SelectItem>
-                                <SelectItem value="parallel">Parallel</SelectItem>
+                                <SelectItem value="Dedicated">Dedicated</SelectItem>
+                                <SelectItem value="Parallel">Parallel</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
@@ -486,11 +484,13 @@ export function EditProject() {
                                 onValueChange={(value) => {
                                   const emp = employees.find(e => e.Id === value);
                                   if (emp) {
-                                    handleTeamMemberChange(index, "EmployeeId", value);
-                                    handleTeamMemberChange(index, "FullName", emp.FullName);
-                                    handleTeamMemberChange(index, "Email", emp.Email);
-                                    handleTeamMemberChange(index, "JobTitle", emp.JobTitle);
-                                    handleTeamMemberChange(index, "SeniorityLevel", emp.SeniorityLevel);
+                                    handleTeamMemberChange(index, {
+                                      EmployeeId: value,
+                                      FullName: emp.FullName,
+                                      Email: emp.Email,
+                                      JobTitle: emp.JobTitle,
+                                      SeniorityLevel: emp.SeniorityLevel
+                                    });
                                   }
                                 }}
                               >
@@ -513,8 +513,10 @@ export function EditProject() {
                                 onValueChange={(value) => {
                                   const role = roles.find(r => r.id === value);
                                   if (role) {
-                                    handleTeamMemberChange(index, "RoleCompositionId", value);
-                                    handleTeamMemberChange(index, "RoleTitle", role.roleTitle);
+                                    handleTeamMemberChange(index, {
+                                      RoleCompositionId: value,
+                                      RoleTitle: role.roleTitle
+                                    });
                                   }
                                 }}
                               >

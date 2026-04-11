@@ -292,7 +292,6 @@ export function ProjectDetail() {
           {project.Members && project.Members.length > 0 ? (
             <div className="space-y-4">
               {project.Members.map((member) => {
-                const employee = getEmployeeDetails(member.EmployeeId);
                 return (
                   <div
                     key={member.Id}
@@ -301,15 +300,15 @@ export function ProjectDetail() {
                     <div className="flex items-center gap-3">
                       <Avatar className="h-10 w-10">
                         <AvatarFallback>
-                          {employee ? getInitials(employee.FullName) : "??"}
+                          {getInitials(member.FullName)}
                         </AvatarFallback>
                       </Avatar>
                       <div>
                         <div className="font-medium">
-                          {employee?.FullName || "Unknown"}
+                          {member.FullName}
                         </div>
                         <div className="text-sm text-gray-500">
-                          {employee?.Email || ""}
+                          {member.Email}
                         </div>
                       </div>
                     </div>

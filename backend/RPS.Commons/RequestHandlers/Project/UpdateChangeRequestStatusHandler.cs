@@ -21,7 +21,7 @@ public class UpdateChangeRequestStatusHandler : IRequestHandler<UpdateChangeRequ
         
         if (changeRequest == null) return false;
 
-        changeRequest.Status = Enum.Parse<RequestStatus>(request.Status);
+        changeRequest.Status = Enum.Parse<RequestStatus>(request.Status, true);
         changeRequest.UpdatedAt = DateTime.UtcNow;
 
         await _context.SaveChangesAsync(cancellationToken);
