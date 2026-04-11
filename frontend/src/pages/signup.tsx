@@ -14,7 +14,11 @@ const signUpSchema = z.object({
   name: z.string().min(1, "Full name is required").max(120, "Name is too long"),
   email: z.string().min(1, "Email is required").email("Please enter a valid email"),
   password: z.string().min(6, "Password must be at least 6 characters"),
-  role: z.enum(["marketing", "gm", "pm", "hr"]),
+  confirmPassword: z.string().min(1, "Confirm password is required"),
+  role: z.enum(["Marketing", "GM", "PM", "HR"]),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
 });
 
 type SignUpFormValues = z.infer<typeof signUpSchema>;
@@ -33,7 +37,8 @@ export function SignUp() {
       name: "",
       email: "",
       password: "",
-      role: "marketing",
+      confirmPassword: "",
+      role: "Marketing",
     },
   });
 
@@ -46,7 +51,18 @@ export function SignUp() {
         navigate("/app");
       }, 100);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Sign up failed");
+      const errorMessage = error instanceof Error ? error.message : "Sign up failed";
+      
+      const isDuplicateEmail = 
+        errorMessage.toLowerCase().includes("email sudah terdaftar") ||
+        errorMessage.toLowerCase().includes("already registered");
+
+      if (isDuplicateEmail) {
+        toast.info("Account already exists. Redirecting to login...");
+        navigate("/login");
+      } else {
+        toast.error(errorMessage || "Sign up failed");
+      }
     }
   };
 
@@ -97,6 +113,19 @@ export function SignUp() {
               aria-invalid={!!errors.password}
             />
             {errors.password && <p className="text-sm text-red-600">{errors.password.message}</p>}
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="confirmPassword">Confirm Password</Label>
+            <Input
+              id="confirmPassword"
+              type="password"
+              placeholder="Confirm your password"
+              {...register("confirmPassword")}
+              aria-invalid={!!errors.confirmPassword}
+            />
+            {errors.confirmPassword && (
+              <p className="text-sm text-red-600">{errors.confirmPassword.message}</p>
+            )}
           </div>
           <div className="space-y-2">
             <Label htmlFor="role">Role</Label>

@@ -4,6 +4,8 @@ using RPS.Commons.Helpers;
 using RPS.Contracts.RequestModels.Auth;
 using RPS.Contracts.ResponseModels.Auth;
 using RPS.Entities;
+using FluentValidation;
+using FluentValidation.Results;
 
 namespace RPS.Commons.RequestHandlers.Auth;
 
@@ -19,11 +21,14 @@ public class RegisterRequestHandler : IRequestHandler<RegisterRequest, AuthRespo
     public async Task<AuthResponse> Handle(RegisterRequest request, CancellationToken cancellationToken)
     {
         var existingUser = await _context.Users
-            .FirstOrDefaultAsync(x => x.Email == request.Email, cancellationToken);
+            .AnyAsync(x => x.Email == request.Email, cancellationToken);
 
-        if (existingUser is not null)
+        if (existingUser)
         {
-            throw new Exception("Email sudah terdaftar");
+            throw new ValidationException(new List<ValidationFailure>
+            {
+                new ValidationFailure("Email", "Email sudah terdaftar")
+            });
         }
 
         if (!Enum.TryParse<UserRole>(request.Role, true, out var role))
