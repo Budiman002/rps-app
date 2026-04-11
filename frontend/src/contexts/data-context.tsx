@@ -40,7 +40,7 @@ interface DataContextType {
   addDetailedRequestChange: (projectId: string, changeRequest: ChangeRequest) => Promise<void>;
   approveChangeRequest: (projectId: string, requestId: string) => Promise<void>;
   rejectChangeRequest: (projectId: string, requestId: string) => Promise<void>;
-  requestContractExtension: (employeeId: string, proposedEndDate: string, reason: string, requestedBy: string) => Promise<void>;
+  requestContractExtension: (employeeId: string, proposedEndDate: string, reason: string) => Promise<void>;
   approveContractExtension: (requestId: string) => Promise<void>;
   rejectContractExtension: (requestId: string) => Promise<void>;
 }
@@ -184,16 +184,17 @@ export function DataProvider({ children }: { children: ReactNode }) {
     await refreshData();
   };
 
-  const requestContractExtension = async (employeeId: string, proposedEndDate: string, reason: string, requestedBy: string) => {
-    const url = `${AppSettings.apiGatewayBasePath}/ContractRequest`;
-    await fetchWithAuth(url, {
-      method: "POST",
-      body: JSON.stringify({
-        EmployeeId: employeeId,
-        RequestedEndDate: proposedEndDate,
-        Reason: reason
-      }),
+  const requestContractExtension = async (employeeId: string, proposedEndDate: string, reason: string) => {
+    const { error } = await api.createContractExtendRequest({
+      EmployeeId: employeeId,
+      RequestedEndDate: proposedEndDate,
+      Reason: reason
     });
+    
+    if (error) {
+      throw new Error(error);
+    }
+    
     await refreshData();
   };
 

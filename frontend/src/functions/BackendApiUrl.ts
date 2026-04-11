@@ -12,6 +12,7 @@ export const BackendApiUrl = {
   updateProject: `${baseUrl}/Project`,
   getEmployees: `${baseUrl}/Employee`,
   createChangeRequest: `${baseUrl}/projects/change-requests`,
+  createContractExtendRequest: `${baseUrl}/ContractExtendRequest`,
 };
 
 export function GetProjectById(id: string): string {

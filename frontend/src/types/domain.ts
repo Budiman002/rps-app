@@ -118,3 +118,9 @@ export interface UpdateProjectRequest {
   Roles: UpdateRoleCompositionItem[];
   Members: UpdateProjectMemberItem[];
 }
+
+export interface CreateExtendContractRequest {
+  EmployeeId: string;
+  RequestedEndDate: string;
+  Reason: string;
+}

@@ -1,6 +1,6 @@
 import { BackendApiUrl, GetProjectById, UpdateProjectById } from "../BackendApiUrl";
 import { useFetchWithAccessToken } from "../useFetchWithAccessToken";
-import type { ChangeRequest, Employee, Project, UpdateProjectRequest } from "@/types/domain";
+import type { ChangeRequest, CreateExtendContractRequest, Employee, Project, UpdateProjectRequest } from "@/types/domain";
 
 export function useRpsApi() {
   const { fetchGET, fetchPOST, fetchPUT } = useFetchWithAccessToken();
@@ -15,6 +15,8 @@ export function useRpsApi() {
     getEmployees: () => fetchGET<Employee[]>(BackendApiUrl.getEmployees),
     createChangeRequest: (payload: ChangeRequest) =>
       fetchPOST<ChangeRequest>(BackendApiUrl.createChangeRequest, payload),
+    createContractExtendRequest: (payload: CreateExtendContractRequest) =>
+      fetchPOST<void>(BackendApiUrl.createContractExtendRequest, payload),
   };
 }
 
