@@ -82,7 +82,7 @@ export function GlobalSearch({ onEmployeeSelect, placeholder = "Search projects 
   // Get employee projects count
   const getEmployeeProjectCount = (employeeId: string) => {
     return projects.filter(
-      (p) => p.AssignedPmId === employeeId || p.Members?.some((m) => m.Id === employeeId)
+      (p) => p.AssignedPmId === employeeId || p.Members?.some((m) => m.EmployeeId === employeeId)
     ).length;
   };
 
@@ -131,13 +131,13 @@ export function GlobalSearch({ onEmployeeSelect, placeholder = "Search projects 
                     <div className="text-xs text-gray-500 truncate">{project.ClientName}</div>
                     <div className="flex items-center gap-2 mt-1">
                       {project.Status === "Scheduled" && (
-                        <Badge className="bg-purple-500 text-xs">Scheduled</Badge>
+                        <Badge className="bg-purple-500 text-xs text-white">Scheduled</Badge>
                       )}
                       {project.Status === "InProgress" && (
-                        <Badge className="bg-blue-500 text-xs">In Progress</Badge>
+                        <Badge className="bg-blue-500 text-xs text-white">In Progress</Badge>
                       )}
                       {project.Status === "Complete" && (
-                        <Badge className="bg-green-500 text-xs">Completed</Badge>
+                        <Badge className="bg-green-500 text-xs text-white">Completed</Badge>
                       )}
                       {project.Status === "Unassigned" && (
                         <Badge variant="secondary" className="text-xs">Unassigned</Badge>
@@ -195,4 +195,3 @@ export function GlobalSearch({ onEmployeeSelect, placeholder = "Search projects 
     </div>
   );
 }
-

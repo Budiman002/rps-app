@@ -1,6 +1,6 @@
 import { BackendApiUrl, GetProjectById, UpdateProjectById } from "../BackendApiUrl";
 import { useFetchWithAccessToken } from "../useFetchWithAccessToken";
-import type { ChangeRequest, Employee, Project } from "@/types/domain";
+import type { ChangeRequest, Employee, Project, UpdateProjectRequest } from "@/types/domain";
 
 export function useRpsApi() {
   const { fetchGET, fetchPOST, fetchPUT } = useFetchWithAccessToken();
@@ -10,7 +10,7 @@ export function useRpsApi() {
     getProjectById: (id: string) => fetchGET<Project>(GetProjectById(id)),
     createProject: (payload: Omit<Project, "Id" | "UpdatedAt" | "Status" | "CreatedAt" | "Members">) =>
       fetchPOST<Project>(BackendApiUrl.createProject, payload),
-    updateProject: (id: string, payload: Partial<Project>) =>
+    updateProject: (id: string, payload: UpdateProjectRequest) =>
       fetchPUT<Project>(UpdateProjectById(id), payload),
     getEmployees: () => fetchGET<Employee[]>(BackendApiUrl.getEmployees),
     createChangeRequest: (payload: ChangeRequest) =>

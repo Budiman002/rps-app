@@ -21,14 +21,17 @@ public class GetProjectDetailRequestHandler : IRequestHandler<GetProjectDetailRe
             .Include(x => x.RoleCompositions)
             .Include(x => x.ChangeRequests)
             .Include(x => x.Members)
-            .ThenInclude(x => x.Employee)
-            .FirstOrDefaultAsync(x => x.Id == request.Id, cancellationToken);
+                .ThenInclude(x => x.Employee)
+            .Include(x => x.Members)
+                .ThenInclude(x => x.RoleComposition)
+            .FirstOrDefaultAsync(x => x.Id == request.Id, cancellationToken)
+            ?? throw new KeyNotFoundException($"Project dengan ID {request.Id} tidak ditemukan.");
 
-        if (project is null)
-        {
-            throw new Exception("Project tidak ditemukan");
-        }
+        return MapProjectResponse(project);
+    }
 
+    internal static ProjectResponse MapProjectResponse(RPS.Entities.Project project)
+    {
         return new ProjectResponse
         {
             Id = project.Id,
@@ -42,6 +45,7 @@ public class GetProjectDetailRequestHandler : IRequestHandler<GetProjectDetailRe
             EstimatedEndDate = project.EstimatedEndDate,
             ActualStartDate = project.ActualStartDate,
             DurationWeeks = project.DurationWeeks,
+            AssignedPmId = project.AssignedPmId,
             CreatedAt = project.CreatedAt,
             UpdatedAt = project.UpdatedAt,
             RoleCompositions = project.RoleCompositions.Select(rc => new RoleCompositionResponse
@@ -59,7 +63,9 @@ public class GetProjectDetailRequestHandler : IRequestHandler<GetProjectDetailRe
                 Email = m.Employee.Email,
                 JobTitle = m.Employee.JobTitle,
                 SeniorityLevel = m.Employee.SeniorityLevel,
-                YearsOfExperience = m.Employee.YearsOfExperience
+                YearsOfExperience = m.Employee.YearsOfExperience,
+                RoleCompositionId = m.RoleCompositionId,
+                RoleTitle = m.RoleComposition?.RoleTitle ?? string.Empty
             }).ToList(),
             RequestChanges = project.ChangeRequests.Select(cr => new ChangeRequestResponse
             {

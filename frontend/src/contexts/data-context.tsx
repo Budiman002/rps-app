@@ -2,12 +2,17 @@ import { createContext, useContext, useState, ReactNode, useEffect } from "react
 import { AppSettings } from "@/functions/AppSettings";
 import { BackendApiUrl } from "@/functions/BackendApiUrl";
 import { useAuth } from "@/contexts/auth-context";
+import { useRpsApi } from "@/functions/api/rpsApi";
 import type {
   ChangeRequest,
   ContractExtensionRequest,
   Employee,
   Project,
-  TeamMember,
+  ProjectStatus,
+  Priority,
+  Seniority,
+  ProjectMember,
+  UpdateProjectRequest,
 } from "@/types/domain";
 
 export type {
@@ -15,9 +20,11 @@ export type {
   ContractExtensionRequest,
   Employee,
   Project,
-  TeamMember,
+  ProjectStatus,
   Priority,
   Seniority,
+  ProjectMember,
+  UpdateProjectRequest,
 } from "@/types/domain";
 
 interface DataContextType {
@@ -26,16 +33,16 @@ interface DataContextType {
   isLoading: boolean;
   refreshData: () => Promise<void>;
   addProject: (project: Omit<Project, "Id" | "UpdatedAt" | "Status" | "CreatedAt" | "Members">) => Promise<void>;
-  updateProject: (id: string, updates: Partial<Project>) => Promise<void>;
-  assignMembers: (projectId: string, members: TeamMember[], pmId: string) => Promise<void>;
+  updateProject: (id: string, updates: UpdateProjectRequest) => Promise<void>;
+  assignMembers: (projectId: string, members: ProjectMember[], pmId: string) => Promise<void>;
   updateEmployee: (id: string, updates: Partial<Employee>) => Promise<void>;
   addRequestChange: (projectId: string, title: string, description: string) => Promise<void>;
   addDetailedRequestChange: (projectId: string, changeRequest: ChangeRequest) => Promise<void>;
   approveChangeRequest: (projectId: string, requestId: string) => Promise<void>;
   rejectChangeRequest: (projectId: string, requestId: string) => Promise<void>;
   requestContractExtension: (employeeId: string, proposedEndDate: string, reason: string, requestedBy: string) => Promise<void>;
-  approveContractExtension: (employeeId: string) => Promise<void>;
-  rejectContractExtension: (employeeId: string) => Promise<void>;
+  approveContractExtension: (requestId: string) => Promise<void>;
+  rejectContractExtension: (requestId: string) => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -54,30 +61,16 @@ export function DataProvider({ children }: { children: ReactNode }) {
     };
     const response = await fetch(url, { ...options, headers });
     if (!response.ok) {
-        if (response.status === 401) {
-            // Token expired or invalid
-        }
         throw new Error(`API Request failed: ${response.statusText}`);
     }
     return response;
   };
 
-  const getEmployeeName = (employeeId: string) => {
-    return employees.find(e => e.Id === employeeId)?.FullName || "Unknown";
-  };
-
-  const formatDate = (value: string) => {
-    const parts = value.split("T");
-    const dateOnly = parts[0];
-    if (!dateOnly) return "-";
-    const [year, month, day] = dateOnly.split("-").map(Number);
-    if (year === undefined || month === undefined || day === undefined || isNaN(year) || isNaN(month) || isNaN(day)) return value;
-    const date = new Date(year, month - 1, day);
-    return date.toLocaleDateString();
-  };
-
   const refreshData = async () => {
-    if (!isAuthenticated || !token) return;
+    if (!isAuthenticated || !token) {
+      setIsLoading(false);
+      return;
+    }
     
     setIsLoading(true);
     try {
@@ -118,16 +111,17 @@ export function DataProvider({ children }: { children: ReactNode }) {
     await refreshData();
   };
 
-  const updateProject = async (id: string, updates: Partial<Project>) => {
-    const url = `${BackendApiUrl.updateProject}/${id}`;
-    await fetchWithAuth(url, {
-      method: "PUT",
-      body: JSON.stringify(updates),
-    });
+  const api = useRpsApi();
+
+  const updateProject = async (id: string, updates: UpdateProjectRequest) => {
+    const { error } = await api.updateProject(id, updates);
+    if (error) {
+      throw new Error(error);
+    }
     await refreshData();
   };
 
-  const assignMembers = async (projectId: string, members: TeamMember[], pmId: string) => {
+  const assignMembers = async (projectId: string, members: ProjectMember[], pmId: string) => {
     const url = `${BackendApiUrl.updateProject}/${projectId}/assign`;
     await fetchWithAuth(url, {
       method: "POST",
@@ -140,7 +134,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
   };
 
   const updateEmployee = async (id: string, updates: Partial<Employee>) => {
-    // Note: Adjust endpoint if specific employee update exists
     const url = `${BackendApiUrl.getEmployees}/${id}`;
     await fetchWithAuth(url, {
       method: "PUT",
@@ -156,7 +149,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         ProjectId: projectId,
         ChangeTitle: title,
         ChangeDescription: description,
-        RequestType: "Timeline" // Default or selected
+        RequestType: "Timeline"
       }),
     });
     await refreshData();

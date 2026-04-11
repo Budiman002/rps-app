@@ -32,7 +32,7 @@ export function Dashboard() {
     // Filter projects where the selected employee is either PM or team member
     return projects.filter(project => 
       project.AssignedPmId === selectedEmployeeId || 
-      project.Members?.some(m => m.Id === selectedEmployeeId)
+      project.Members?.some(m => m.EmployeeId === selectedEmployeeId)
     );
   }, [projects, selectedEmployeeId]);
 
@@ -53,6 +53,7 @@ export function Dashboard() {
   const formatDate = (date: string | null | undefined) => {
     if (!date) return "-";
     const d = new Date(date);
+    if (isNaN(d.getTime())) return date;
     return `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`;
   };
 
@@ -142,7 +143,6 @@ export function Dashboard() {
         </Card>
       </div>
 
-      {/* Gantt Chart (Placeholder for now, assumes updated inside component) */}
       <GanttChart projects={projects} />
 
       {/* Projects Table */}
@@ -252,4 +252,3 @@ export function Dashboard() {
     </div>
   );
 }
-

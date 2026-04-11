@@ -79,7 +79,7 @@ export function ProjectDetail() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "Scheduled":
-        return <Badge className="bg-slate-400">Scheduled</Badge>;
+        return <Badge className="bg-purple-500">Scheduled</Badge>;
       case "InProgress":
         return <Badge className="bg-blue-500">In Progress</Badge>;
       case "Complete":
@@ -292,7 +292,7 @@ export function ProjectDetail() {
           {project.Members && project.Members.length > 0 ? (
             <div className="space-y-4">
               {project.Members.map((member) => {
-                const employee = getEmployeeDetails(member.Id);
+                const employee = getEmployeeDetails(member.EmployeeId);
                 return (
                   <div
                     key={member.Id}
@@ -314,7 +314,7 @@ export function ProjectDetail() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="font-medium">{member.JobTitle}</div>
+                      <div className="font-medium">{member.RoleTitle}</div>
                       <Badge variant="outline" className="mt-1 capitalize">
                         {member.SeniorityLevel}
                       </Badge>

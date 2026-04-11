@@ -45,7 +45,7 @@ export function ProjectManagement() {
     (p) => p.Id === selectedProjectIdForHistory,
   );
 
-  // Handle PM logic: Backend already filters projects by PM ID
+  // Filter projects logic
   const allProjects = projects;
   const unassignedProjects = projects.filter((p) => p.Status === "Unassigned");
 
@@ -257,6 +257,12 @@ export function ProjectManagement() {
       </div>
 
       <Tabs defaultValue="all" className="w-full">
+        <TabsList>
+          <TabsTrigger value="all">All Projects</TabsTrigger>
+          {user?.role === "GM" && (
+            <TabsTrigger value="unassigned">Unassigned</TabsTrigger>
+          )}
+        </TabsList>
         <TabsContent value="all" className="mt-6">
           <Card>
             <CardHeader>

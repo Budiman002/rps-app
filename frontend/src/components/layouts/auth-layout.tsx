@@ -3,12 +3,12 @@ import { useAuth } from "@/contexts/auth-context";
 
 function getRoleHomePath(role?: string) {
   switch (role) {
-    case "pm":
+    case "PM":
       return "/app/pm-dashboard";
-    case "hr":
+    case "HR":
       return "/app/employees";
-    case "gm":
-    case "marketing":
+    case "GM":
+    case "Marketing":
     default:
       return "/app/dashboard";
   }

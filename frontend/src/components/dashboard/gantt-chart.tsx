@@ -11,7 +11,9 @@ export function GanttChart({ projects }: GanttChartProps) {
   const { timeline, monthHeaders } = useMemo(() => {
     // Filter projects with dates
     const projectsWithDates = projects.filter(
-      (p) => p.ExpectedStartDate && p.EstimatedEndDate,
+      (p) =>
+        (p.ActualStartDate || p.ExpectedStartDate) &&
+        (p.EndDate || p.EstimatedEndDate),
     );
 
     if (projectsWithDates.length === 0) {
@@ -20,8 +22,8 @@ export function GanttChart({ projects }: GanttChartProps) {
 
     // Find min and max dates
     const allDates = projectsWithDates.flatMap((p) => [
-      new Date(p.ExpectedStartDate!),
-      new Date(p.EstimatedEndDate!),
+      new Date(p.ActualStartDate || p.ExpectedStartDate!),
+      new Date(p.EndDate || p.EstimatedEndDate!),
     ]);
     const minDate = new Date(Math.min(...allDates.map((d) => d.getTime())));
     const maxDate = new Date(Math.max(...allDates.map((d) => d.getTime())));
@@ -57,8 +59,10 @@ export function GanttChart({ projects }: GanttChartProps) {
 
     // Create timeline bars
     const timeline = projectsWithDates.map((project) => {
-      const projectStart = new Date(project.ExpectedStartDate!);
-      const projectEnd = new Date(project.EstimatedEndDate!);
+      const projectStart = new Date(
+        project.ActualStartDate || project.ExpectedStartDate!,
+      );
+      const projectEnd = new Date(project.EndDate || project.EstimatedEndDate!);
 
       const startOffset = Math.ceil(
         (projectStart.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24),
@@ -68,7 +72,6 @@ export function GanttChart({ projects }: GanttChartProps) {
           (projectEnd.getTime() - projectStart.getTime()) /
             (1000 * 60 * 60 * 24),
         ) + 1;
-
       const leftPercent = (startOffset / totalDays) * 100;
       const widthPercent = (duration / totalDays) * 100;
 

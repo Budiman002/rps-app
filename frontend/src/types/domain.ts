@@ -12,14 +12,28 @@ export type ProjectStatus =
   | "Scheduled"
   | "InProgress"
   | "Complete";
+
 export type Priority = "Low" | "Medium" | "High" | "Critical";
+
 export type Seniority = "Intern" | "Junior" | "Senior";
 
-export interface TeamMember {
-  id: string;
-  employeeId: string;
-  role: string;
-  seniority: Seniority;
+export interface RoleComposition {
+  Id?: string;
+  RoleTitle: string;
+  SeniorityLevel: Seniority;
+  Quantity: number;
+  EmploymentStatus: "dedicated" | "parallel";
+}
+
+export interface ProjectMember {
+  Id: string;
+  EmployeeId: string;
+  FullName: string;
+  Email: string;
+  JobTitle: string;
+  SeniorityLevel: Seniority;
+  RoleCompositionId: string;
+  RoleTitle: string;
 }
 
 export interface ChangeRequest {
@@ -46,25 +60,12 @@ export interface Project {
   EstimatedEndDate: string;
   ActualStartDate?: string;
   EndDate?: string;
-  Priority: string;
-  Status: string;
+  Priority: Priority;
+  Status: ProjectStatus;
   NotesFromMarketing: string;
   PoDocument?: string;
-  RoleCompositions: Array<{
-    Id?: string;
-    RoleTitle: string;
-    SeniorityLevel: string;
-    EmploymentStatus: string;
-    Quantity: number;
-  }>;
-  Members: Array<{
-    Id: string;
-    FullName: string;
-    Email: string;
-    JobTitle: string;
-    SeniorityLevel: string;
-    YearsOfExperience: number;
-  }>;
+  RoleCompositions: RoleComposition[];
+  Members?: ProjectMember[];
   AssignedPmId?: string;
   CreatedAt: string;
   UpdatedAt: string;
@@ -88,10 +89,32 @@ export interface Employee {
   JobTitle: string;
   SeniorityLevel: Seniority;
   YearsOfExperience: number;
-  IsUnavailable: boolean;
   ContractType: "Permanent" | "Contract";
   ContractEndDate?: string;
+  IsUnavailable: boolean;
+  CurrentProject?: string;
   CreatedAt: string;
   UpdatedAt: string;
   ExtensionRequest?: ContractExtensionRequest;
+}
+export interface UpdateRoleCompositionItem {
+  Id?: string;
+  RoleTitle: string;
+  SeniorityLevel: Seniority;
+  EmploymentStatus: "dedicated" | "parallel";
+  Quantity: number;
+}
+
+export interface UpdateProjectMemberItem {
+  EmployeeId: string;
+  RoleCompositionId: string;
+}
+
+export interface UpdateProjectRequest {
+  NewStartDate?: string;
+  NewEndDate?: string;
+  NewDurationWeeks?: number;
+  NewStatus?: ProjectStatus;
+  Roles: UpdateRoleCompositionItem[];
+  Members: UpdateProjectMemberItem[];
 }
