@@ -6,7 +6,17 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Edit, FileEdit, Calendar, Users, Building2, Flag, Clock, History } from "lucide-react";
+import {
+  ArrowLeft,
+  Edit,
+  FileEdit,
+  Calendar,
+  Users,
+  Building2,
+  Flag,
+  Clock,
+  History,
+} from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { RequestChangeModal } from "@/components/project-change-requests/request-change-modal";
 import { ChangeRequestsSection } from "@/components/project-change-requests/change-requests-section";
@@ -18,16 +28,32 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 
+const formatDate = (dateStr: string | null | undefined): string => {
+  if (!dateStr) return "Not set";
+  return new Date(dateStr).toLocaleDateString("id-ID", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+};
+
 export function ProjectDetail() {
   const { id } = useParams();
   const { user } = useAuth();
-  const { projects, employees, addDetailedRequestChange, approveChangeRequest, rejectChangeRequest } = useData();
+  const {
+    projects,
+    employees,
+    addDetailedRequestChange,
+    approveChangeRequest,
+    rejectChangeRequest,
+  } = useData();
   const navigate = useNavigate();
   const location = useLocation();
   const [showRequestModal, setShowRequestModal] = useState(false);
-  const [selectedProjectIdForHistory, setSelectedProjectIdForHistory] = useState<string | null>(null);
+  const [selectedProjectIdForHistory, setSelectedProjectIdForHistory] =
+    useState<string | null>(null);
 
-  const project = projects.find(p => p.Id === id);
+  const project = projects.find((p) => p.Id === id);
 
   // Get the return path from location state, or use a default based on user role
   const getBackPath = () => {
@@ -53,7 +79,7 @@ export function ProjectDetail() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "Scheduled":
-        return <Badge className="bg-slate-400">Scheduled</Badge>;
+        return <Badge className="bg-purple-500">Scheduled</Badge>;
       case "InProgress":
         return <Badge className="bg-blue-500">In Progress</Badge>;
       case "Complete":
@@ -83,18 +109,18 @@ export function ProjectDetail() {
   const getInitials = (name: string) => {
     return name
       .split(" ")
-      .map(n => n[0])
+      .map((n) => n[0])
       .join("")
       .toUpperCase()
       .slice(0, 2);
   };
 
   const getEmployeeDetails = (employeeId: string) => {
-    return employees.find(e => e.Id === employeeId);
+    return employees.find((e) => e.Id === employeeId);
   };
 
   // Check if current user is the PM of this project
-  const pmEmployee = employees.find(e => e.Email === user?.email);
+  const pmEmployee = employees.find((e) => e.Email === user?.email);
   const isPM = user?.role === "PM" && project.AssignedPmId === pmEmployee?.Id;
 
   useEffect(() => {
@@ -145,7 +171,11 @@ export function ProjectDetail() {
             )}
             {user?.role === "GM" && (
               <Button
-                onClick={() => navigate(`/app/projects/${project.Id}/edit`, { state: { from: location.state?.from } })}
+                onClick={() =>
+                  navigate(`/app/projects/${project.Id}/edit`, {
+                    state: { from: location.state?.from },
+                  })
+                }
                 className="gap-2"
               >
                 <Edit className="h-4 w-4" />
@@ -174,7 +204,9 @@ export function ProjectDetail() {
               <Flag className="h-5 w-5 text-gray-400 mt-0.5" />
               <div>
                 <div className="text-sm text-gray-500">Priority</div>
-                <div className="font-medium">{getPriorityBadge(project.Priority)}</div>
+                <div className="font-medium">
+                  {getPriorityBadge(project.Priority)}
+                </div>
               </div>
             </div>
             <div className="flex items-start gap-3">
@@ -182,7 +214,9 @@ export function ProjectDetail() {
               <div>
                 <div className="text-sm text-gray-500">Start Date</div>
                 <div className="font-medium">
-                  {project.ActualStartDate || project.ExpectedStartDate || "Not set"}
+                  {formatDate(
+                    project.ActualStartDate || project.ExpectedStartDate,
+                  )}
                 </div>
               </div>
             </div>
@@ -191,7 +225,7 @@ export function ProjectDetail() {
               <div>
                 <div className="text-sm text-gray-500">End Date</div>
                 <div className="font-medium">
-                  {project.EndDate || project.EstimatedEndDate || "Not set"}
+                  {formatDate(project.EndDate || project.EstimatedEndDate)}
                 </div>
               </div>
             </div>
@@ -208,7 +242,9 @@ export function ProjectDetail() {
               </div>
               <div>
                 <div className="text-sm text-gray-500">Status</div>
-                <div className="font-medium">{getStatusBadge(project.Status)}</div>
+                <div className="font-medium">
+                  {getStatusBadge(project.Status)}
+                </div>
               </div>
             </div>
           </div>
@@ -243,7 +279,11 @@ export function ProjectDetail() {
             <div className="flex items-center gap-2 text-sm text-gray-500">
               <Users className="h-4 w-4" />
               <span>
-                {project.Members?.length || 0} / {project.RoleCompositions?.reduce((sum, t) => sum + t.Quantity, 0) || 0}
+                {project.Members?.length || 0} /{" "}
+                {project.RoleCompositions?.reduce(
+                  (sum, t) => sum + t.Quantity,
+                  0,
+                ) || 0}
               </span>
             </div>
           </div>
@@ -254,7 +294,10 @@ export function ProjectDetail() {
               {project.Members.map((member) => {
                 const employee = getEmployeeDetails(member.EmployeeId);
                 return (
-                  <div key={member.Id} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div
+                    key={member.Id}
+                    className="flex items-center justify-between p-4 border rounded-lg"
+                  >
                     <div className="flex items-center gap-3">
                       <Avatar className="h-10 w-10">
                         <AvatarFallback>
@@ -262,8 +305,12 @@ export function ProjectDetail() {
                         </AvatarFallback>
                       </Avatar>
                       <div>
-                        <div className="font-medium">{employee?.FullName || "Unknown"}</div>
-                        <div className="text-sm text-gray-500">{employee?.Email || ""}</div>
+                        <div className="font-medium">
+                          {employee?.FullName || "Unknown"}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {employee?.Email || ""}
+                        </div>
                       </div>
                     </div>
                     <div className="text-right">
@@ -307,7 +354,9 @@ export function ProjectDetail() {
                   <Badge variant="outline" className="capitalize">
                     {comp.SeniorityLevel}
                   </Badge>
-                  <span className="text-sm text-gray-500">×{comp.Quantity}</span>
+                  <span className="text-sm text-gray-500">
+                    ×{comp.Quantity}
+                  </span>
                 </div>
               </div>
             ))}
@@ -316,21 +365,23 @@ export function ProjectDetail() {
       </Card>
 
       {/* Change Requests (if any) */}
-      {project.RequestChanges && project.RequestChanges.length > 0 && (user?.role === "GM" || isPM) && (
-        <ChangeRequestsSection
-          requests={project.RequestChanges}
-          employees={employees}
-          onApprove={(requestId) => {
-            approveChangeRequest(project.Id, requestId);
-            toast.success("Change request approved");
-          }}
-          onReject={(requestId) => {
-            rejectChangeRequest(project.Id, requestId);
-            toast.error("Change request rejected");
-          }}
-          canManage={user?.role === "GM"}
-        />
-      )}
+      {project.RequestChanges &&
+        project.RequestChanges.length > 0 &&
+        (user?.role === "GM" || isPM) && (
+          <ChangeRequestsSection
+            requests={project.RequestChanges}
+            employees={employees}
+            onApprove={(requestId) => {
+              approveChangeRequest(project.Id, requestId);
+              toast.success("Change request approved");
+            }}
+            onReject={(requestId) => {
+              rejectChangeRequest(project.Id, requestId);
+              toast.error("Change request rejected");
+            }}
+            canManage={user?.role === "GM"}
+          />
+        )}
 
       {/* Request Change Modal */}
       {isPM && (
@@ -347,14 +398,17 @@ export function ProjectDetail() {
       )}
 
       {/* Request History Dialog */}
-      <Dialog open={!!selectedProjectIdForHistory} onOpenChange={(open) => !open && setSelectedProjectIdForHistory(null)}>
+      <Dialog
+        open={!!selectedProjectIdForHistory}
+        onOpenChange={(open) => !open && setSelectedProjectIdForHistory(null)}
+      >
         <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Request History - {project.Name}</DialogTitle>
           </DialogHeader>
           <div className="mt-4">
-            <ChangeRequestsSection 
-              requests={project.RequestChanges || []} 
+            <ChangeRequestsSection
+              requests={project.RequestChanges || []}
               employees={employees}
               canManage={false}
             />
