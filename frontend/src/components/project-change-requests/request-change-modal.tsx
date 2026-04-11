@@ -227,20 +227,40 @@ export function RequestChangeModal({ open, onOpenChange, project, employees, onS
       return "Timeline";
     };
 
+    const aggregateRoles = (roles: Array<{ role: string; seniority: Seniority; allocationType: "dedicated" | "parallel"; count: number }>) => {
+      const map = new Map<string, typeof roles[0]>();
+      roles.forEach(r => {
+        const key = `${r.role}-${r.seniority}-${r.allocationType}`;
+        if (map.has(key)) {
+          map.get(key)!.count += Number(r.count);
+        } else {
+          map.set(key, { ...r });
+        }
+      });
+      return Array.from(map.values());
+    };
+
     const changeRequest: ChangeRequest = {
       Id: `REQ${Date.now()}`,
       ChangeTitle: title,
       ChangeDescription: description,
       RequestType: getRequestTypeStr(),
       Status: "pending",
-      CreatedAt: new Date().toISOString().slice(0, 10),
+      CreatedAt: new Date().toISOString(),
       ...(includeTimeline ? {
         NewStartDate: newStartDate,
         NewEndDate: newEndDate,
         NewDurationWeeks: newDuration
       } : {}),
-      RoleChangesJson: includeRoles ? JSON.stringify(roleChanges) : undefined,
-      MemberChangesJson: includeEmployees ? JSON.stringify(employeeChanges) : undefined
+      RoleChangesJson: includeRoles ? JSON.stringify({
+        added: aggregateRoles(roleChanges.added.filter((r) => r.role.trim().length > 0)),
+        removed: aggregateRoles(roleChanges.removed.filter((r) => r.role.trim().length > 0)),
+        modified: []
+      }) : undefined,
+      MemberChangesJson: includeEmployees ? JSON.stringify({
+        added: employeeChanges.added.filter((e) => e.employeeId.trim().length > 0),
+        removed: employeeChanges.removed.filter((e) => e.employeeId.trim().length > 0)
+      }) : undefined
     };
 
     onSubmit(changeRequest);
@@ -284,7 +304,8 @@ export function RequestChangeModal({ open, onOpenChange, project, employees, onS
   };
 
   const availableEmployees = employees.filter(e => 
-    !project.Members?.some(m => m.Id === e.Id)
+    !project.Members?.some(m => m.Id === e.Id) &&
+    !employeeChanges.added.some(emp => emp.employeeId === e.Id)
   );
 
   return (
@@ -505,33 +526,37 @@ export function RequestChangeModal({ open, onOpenChange, project, employees, onS
               <Separator />
 
               <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <Label>Remove Roles</Label>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => addRoleChange("removed")}
-                    className="gap-2"
-                  >
-                    <Plus className="h-4 w-4" />
-                    Add Removal
-                  </Button>
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center justify-between">
+                    <Label>Remove Roles</Label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => addRoleChange("removed")}
+                      className="gap-2"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Add Removal
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-2">Select the specific role composition you wish to reduce, and specify the quantity to remove.</p>
                 </div>
 
-                {roleChanges.removed.map((role, index) => (
+                {roleChanges.removed.map((role, index) => {
+                  const currentValue = role.role ? `${role.role}|${role.seniority}|${role.allocationType || 'dedicated'}` : "";
+                  return (
                   <div key={index} className="flex flex-col xl:flex-row xl:items-end gap-2">
                     <Select
-                      value={role.role}
+                      value={currentValue}
                       onValueChange={(value) => {
+                        const [roleTitle, seniority, allocationType] = value.split("|");
                         const updated = [...roleChanges.removed];
                         const row = updated[index];
                         if (!row) return;
-                        row.role = value;
-                        const existing = project.RoleCompositions?.find(t => t.RoleTitle === value);
-                        if (existing) {
-                          row.seniority = existing.SeniorityLevel as Seniority;
-                        }
+                        row.role = roleTitle || "";
+                        row.seniority = (seniority as Seniority) || "Intern";
+                        row.allocationType = (allocationType as "dedicated" | "parallel") || "dedicated";
                         setRoleChanges({ ...roleChanges, removed: updated });
                       }}
                     >
@@ -539,13 +564,42 @@ export function RequestChangeModal({ open, onOpenChange, project, employees, onS
                         <SelectValue placeholder="Select role to remove" />
                       </SelectTrigger>
                       <SelectContent>
-                        {project.RoleCompositions?.map((tc) => (
-                          <SelectItem key={`${tc.RoleTitle}-${tc.SeniorityLevel}`} value={tc.RoleTitle}>
-                            {tc.RoleTitle} ({tc.SeniorityLevel}) - {tc.Quantity}
-                          </SelectItem>
-                        ))}
+                        {project.RoleCompositions?.map((tc) => {
+                          const optionValue = `${tc.RoleTitle}|${tc.SeniorityLevel}|${tc.EmploymentStatus?.toLowerCase() || 'dedicated'}`;
+                          return (
+                            <SelectItem key={optionValue} value={optionValue}>
+                              {tc.RoleTitle} ({tc.SeniorityLevel}) - {tc.EmploymentStatus} (Qty: {tc.Quantity})
+                            </SelectItem>
+                          );
+                        })}
                       </SelectContent>
                     </Select>
+                    <Input
+                      type="number"
+                      placeholder="Count"
+                      className="w-full xl:w-24"
+                      value={role.count}
+                      onChange={(e) => {
+                        const updated = [...roleChanges.removed];
+                        const row = updated[index];
+                        if (!row) return;
+
+                        let val = parseInt(e.target.value) || 1;
+                        const maxQty = project.RoleCompositions?.find(t => 
+                          t.RoleTitle === role.role && 
+                          t.SeniorityLevel === role.seniority && 
+                          (t.EmploymentStatus?.toLowerCase() || 'dedicated') === (role.allocationType || 'dedicated')
+                        )?.Quantity || 1;
+
+                        if (val > maxQty) {
+                           val = maxQty;
+                           toast.error(`Maximum quantity available to remove is ${maxQty}`);
+                        }
+
+                        row.count = val;
+                        setRoleChanges({ ...roleChanges, removed: updated });
+                      }}
+                    />
                     <Button
                       type="button"
                       variant="ghost"
@@ -560,7 +614,7 @@ export function RequestChangeModal({ open, onOpenChange, project, employees, onS
                       <X className="h-4 w-4" />
                     </Button>
                   </div>
-                ))}
+                )})}
               </div>
                 </>
               )}
@@ -616,6 +670,11 @@ export function RequestChangeModal({ open, onOpenChange, project, employees, onS
                         <SelectValue placeholder="Select employee" />
                       </SelectTrigger>
                       <SelectContent>
+                        {emp.employeeId && (
+                          <SelectItem value={emp.employeeId} className="hidden">
+                            {employees.find(e => e.Id === emp.employeeId)?.FullName} - {emp.role} ({emp.seniority})
+                          </SelectItem>
+                        )}
                         {availableEmployees.map((e) => (
                           <SelectItem key={e.Id} value={e.Id}>
                             {e.FullName} - {e.JobTitle} ({e.SeniorityLevel})

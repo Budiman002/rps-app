@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { formatDate } from "@/functions/dateFormatter";
 import { useParams, useNavigate, useLocation } from "react-router";
 import { useAuth } from "@/contexts/auth-context";
 import { useData, Project, ProjectMember, Seniority, UpdateProjectRequest } from "@/contexts/data-context";
@@ -49,16 +50,23 @@ export function EditProject() {
       setDuration(String(project.DurationWeeks || 0));
       setEndDate(project.EndDate || project.EstimatedEndDate || "");
       
-      const mappedRoles = (project.RoleCompositions || []).map(rc => ({
-        id: rc.Id || crypto.randomUUID(),
-        roleTitle: rc.RoleTitle,
-        seniorityLevel: rc.SeniorityLevel,
-        employmentStatus: rc.EmploymentStatus,
-        quantity: rc.Quantity
+      const mappedRoles = (project.RoleCompositions || []).map((rc: any) => ({
+        id: rc.id || rc.Id || crypto.randomUUID(),
+        roleTitle: rc.roleTitle || rc.RoleTitle || "",
+        seniorityLevel: rc.seniorityLevel || rc.SeniorityLevel || "",
+        employmentStatus: rc.employmentStatus || rc.EmploymentStatus || "Dedicated",
+        quantity: rc.quantity || rc.Quantity || 0
       }));
       setRoles(mappedRoles);
       
-      setTeamMembers([...(project.Members || [])]);
+      const mappedMembers = (project.Members || []).map((m: any) => ({
+        ...m,
+        EmployeeId: m.id || m.Id, // Link to employee ID
+        RoleCompositionId: m.roleCompositionId || m.RoleCompositionId,
+        JobTitle: m.jobTitle || m.JobTitle,
+        RoleTitle: m.roleTitle || m.RoleTitle
+      }));
+      setTeamMembers(mappedMembers);
     }
   }, [project]);
 
@@ -321,8 +329,8 @@ export function EditProject() {
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
                   <h3 className="font-semibold text-blue-900 mb-2">Original Baseline</h3>
                   <div className="text-sm text-blue-800 space-y-1">
-                    <div>Expected Start: {project.ExpectedStartDate ? new Date(project.ExpectedStartDate).toLocaleDateString() : "N/A"}</div>
-                    <div>Estimated End: {project.EstimatedEndDate ? new Date(project.EstimatedEndDate).toLocaleDateString() : "N/A"}</div>
+                    <div>Expected Start: {formatDate(project.ExpectedStartDate)}</div>
+                    <div>Estimated End: {formatDate(project.EstimatedEndDate)}</div>
                   </div>
                 </div>
               </TabsContent>
@@ -461,78 +469,92 @@ export function EditProject() {
                   <div className="space-y-3">
                     {teamMembers.map((member, index) => {
                       return (
-                        <div key={member.Id} className="p-4 border rounded-lg space-y-3">
+                        <div key={member.Id || index} className="p-4 border rounded-lg space-y-4">
                           <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium text-gray-500">
-                              Assignment #{index + 1}
+                            <span className="text-sm font-medium text-gray-700">
+                              Member #{index + 1}
                             </span>
                             <Button
                               type="button"
                               variant="ghost"
                               size="sm"
                               onClick={() => handleRemoveTeamMember(index)}
-                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                              className="text-red-500 hover:text-red-600 hover:bg-red-50 gap-1.5"
                             >
                               <Trash2 className="h-4 w-4" />
+                              Remove
                             </Button>
                           </div>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+
+                          <div className="grid grid-cols-1 md:grid-cols-[2fr_1.5fr_0.5fr] gap-4 items-end">
                             <div className="space-y-2">
-                              <Label>Practitioner</Label>
+                              <Label className="text-xs font-semibold uppercase tracking-wider text-gray-500">Employee *</Label>
                               <Select
                                 value={member.EmployeeId}
                                 onValueChange={(value) => {
                                   const emp = employees.find(e => e.Id === value);
                                   if (emp) {
+                                    // Automatic background matching for Role Composition
+                                    const matchingRole = roles.find(r => 
+                                      r.roleTitle === emp.JobTitle && 
+                                      r.seniorityLevel === emp.SeniorityLevel
+                                    ) || roles.find(r => r.roleTitle === emp.JobTitle);
+
                                     handleTeamMemberChange(index, {
                                       EmployeeId: value,
                                       FullName: emp.FullName,
                                       Email: emp.Email,
                                       JobTitle: emp.JobTitle,
-                                      SeniorityLevel: emp.SeniorityLevel
+                                      SeniorityLevel: emp.SeniorityLevel,
+                                      RoleCompositionId: matchingRole?.id || "",
+                                      RoleTitle: matchingRole?.roleTitle || emp.JobTitle
                                     });
                                   }
                                 }}
                               >
-                                <SelectTrigger>
+                                <SelectTrigger className="bg-gray-50/50">
                                   <SelectValue placeholder="Select employee..." />
                                 </SelectTrigger>
                                 <SelectContent>
                                   {employees.map((emp) => (
                                     <SelectItem key={emp.Id} value={emp.Id}>
-                                      {emp.FullName} - {emp.JobTitle}
+                                      {emp.FullName} - {emp.JobTitle} ({emp.SeniorityLevel})
                                     </SelectItem>
                                   ))}
                                 </SelectContent>
                               </Select>
                             </div>
+
                             <div className="space-y-2">
-                              <Label>Filling Role (from Budget)</Label>
-                              <Select
-                                value={member.RoleCompositionId}
-                                onValueChange={(value) => {
-                                  const role = roles.find(r => r.id === value);
-                                  if (role) {
-                                    handleTeamMemberChange(index, {
-                                      RoleCompositionId: value,
-                                      RoleTitle: role.roleTitle
-                                    });
-                                  }
-                                }}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select role from budget..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {roles.map((role) => (
-                                    <SelectItem key={role.id} value={role.id}>
-                                      {role.roleTitle} ({role.seniorityLevel})
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
+                              <Label className="text-xs font-semibold uppercase tracking-wider text-gray-500">Role</Label>
+                              <div className="h-10 px-3 flex items-center bg-gray-50 border rounded-md text-gray-500 text-sm">
+                                {member.RoleTitle || member.JobTitle || (
+                                  <span className="text-gray-400 italic">Select employee to see role</span>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label className="text-xs font-semibold uppercase tracking-wider text-gray-500">Seniority</Label>
+                              <div className="h-10 flex items-center">
+                                {member.SeniorityLevel ? (
+                                  <Badge variant="outline" className="px-3 py-1 bg-white">
+                                    {member.SeniorityLevel}
+                                  </Badge>
+                                ) : (
+                                  <span className="text-xs text-gray-400">-</span>
+                                )}
+                              </div>
                             </div>
                           </div>
+
+                          {member.Email && (
+                            <div className="pt-1">
+                                <span className="text-sm text-gray-400 px-1 bg-gray-50 rounded">
+                                  {member.Email}
+                                </span>
+                            </div>
+                          )}
                         </div>
                       );
                     })}
