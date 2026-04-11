@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { formatDate } from "@/functions/dateFormatter";
 import { useParams, useNavigate, useLocation } from "react-router";
 import { useAuth } from "@/contexts/auth-context";
 import { useData, Project, ProjectMember, Seniority, UpdateProjectRequest } from "@/contexts/data-context";
@@ -323,8 +324,8 @@ export function EditProject() {
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
                   <h3 className="font-semibold text-blue-900 mb-2">Original Baseline</h3>
                   <div className="text-sm text-blue-800 space-y-1">
-                    <div>Expected Start: {project.ExpectedStartDate ? new Date(project.ExpectedStartDate).toLocaleDateString() : "N/A"}</div>
-                    <div>Estimated End: {project.EstimatedEndDate ? new Date(project.EstimatedEndDate).toLocaleDateString() : "N/A"}</div>
+                    <div>Expected Start: {formatDate(project.ExpectedStartDate)}</div>
+                    <div>Estimated End: {formatDate(project.EstimatedEndDate)}</div>
                   </div>
                 </div>
               </TabsContent>

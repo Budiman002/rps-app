@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { formatDate } from "@/functions/dateFormatter";
 import { useNavigate } from "react-router";
 import { useAuth } from "@/contexts/auth-context";
 import { Project, useData } from "@/contexts/data-context";
@@ -80,15 +81,6 @@ export function ProjectManagement() {
     }
   };
 
-  const formatDate = (dateString: string | undefined) => {
-    if (!dateString) return "-";
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) return dateString;
-    const day = String(date.getDate()).padStart(2, "0");
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const year = date.getFullYear();
-    return `${day}-${month}-${year}`;
-  };
 
   const renderProjectRow = (project: Project, showAssignButton = false) => (
     <TableRow key={project.Id}>

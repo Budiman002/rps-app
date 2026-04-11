@@ -27,15 +27,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-
-const formatDate = (dateStr: string | null | undefined): string => {
-  if (!dateStr) return "Not set";
-  return new Date(dateStr).toLocaleDateString("id-ID", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
-};
+import { formatDate } from "@/functions/dateFormatter";
 
 export function ProjectDetail() {
   const { id } = useParams();
@@ -119,9 +111,9 @@ export function ProjectDetail() {
     return employees.find((e) => e.Id === employeeId);
   };
 
+
   // Check if current user is the PM of this project
-  const pmEmployee = employees.find((e) => e.Email === user?.email);
-  const isPM = user?.role === "PM" && project.AssignedPmId === pmEmployee?.Id;
+  const isPM = user?.role === "PM";
 
   useEffect(() => {
     if (isPM && location.state?.openRequestModal) {
@@ -171,11 +163,7 @@ export function ProjectDetail() {
             )}
             {user?.role === "GM" && (
               <Button
-                onClick={() =>
-                  navigate(`/app/projects/${project.Id}/edit`, {
-                    state: { from: location.state?.from },
-                  })
-                }
+                onClick={() => navigate(`/app/projects/${project.Id}/edit`, { state: { from: location.state?.from } })}
                 className="gap-2"
               >
                 <Edit className="h-4 w-4" />
@@ -214,9 +202,7 @@ export function ProjectDetail() {
               <div>
                 <div className="text-sm text-gray-500">Start Date</div>
                 <div className="font-medium">
-                  {formatDate(
-                    project.ActualStartDate || project.ExpectedStartDate,
-                  )}
+                  {formatDate(project.ActualStartDate || project.ExpectedStartDate)}
                 </div>
               </div>
             </div>
@@ -306,10 +292,10 @@ export function ProjectDetail() {
                       </Avatar>
                       <div>
                         <div className="font-medium">
-                          {employee?.FullName || "Unknown"}
+                          {employee?.FullName || member.FullName || "Unknown"}
                         </div>
                         <div className="text-sm text-gray-500">
-                          {employee?.Email || ""}
+                          {employee?.Email || member.Email || ""}
                         </div>
                       </div>
                     </div>
