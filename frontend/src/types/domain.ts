@@ -22,7 +22,7 @@ export interface RoleComposition {
   RoleTitle: string;
   SeniorityLevel: Seniority;
   Quantity: number;
-  EmploymentStatus: "dedicated" | "parallel";
+  EmploymentStatus: "Dedicated" | "Parallel";
 }
 
 export interface ProjectMember {
@@ -101,7 +101,7 @@ export interface UpdateRoleCompositionItem {
   Id?: string;
   RoleTitle: string;
   SeniorityLevel: Seniority;
-  EmploymentStatus: "dedicated" | "parallel";
+  EmploymentStatus: "Dedicated" | "Parallel";
   Quantity: number;
 }
 

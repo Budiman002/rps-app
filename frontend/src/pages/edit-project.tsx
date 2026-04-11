@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { formatDate } from "@/functions/dateFormatter";
 import { useParams, useNavigate, useLocation } from "react-router";
 import { useAuth } from "@/contexts/auth-context";
 import { useData, Project, ProjectMember, Seniority, UpdateProjectRequest } from "@/contexts/data-context";
@@ -26,7 +27,7 @@ export function EditProject() {
     id: string; // GUID or temp
     roleTitle: string; 
     seniorityLevel: Seniority; 
-    employmentStatus: "dedicated" | "parallel"; 
+    employmentStatus: "Dedicated" | "Parallel"; 
     quantity: number 
   };
   
@@ -49,18 +50,53 @@ export function EditProject() {
       setDuration(String(project.DurationWeeks || 0));
       setEndDate(project.EndDate || project.EstimatedEndDate || "");
       
-      const mappedRoles = (project.RoleCompositions || []).map(rc => ({
-        id: rc.Id || crypto.randomUUID(),
-        roleTitle: rc.RoleTitle,
-        seniorityLevel: rc.SeniorityLevel,
-        employmentStatus: rc.EmploymentStatus,
-        quantity: rc.Quantity
-      }));
+      const ZERO_GUID = "00000000-0000-0000-0000-000000000000";
+
+      const mappedRoles = (project.RoleCompositions || []).map((rc: any) => {
+        const rcId = rc.id || rc.Id;
+        return {
+          id: (rcId && rcId !== ZERO_GUID) ? rcId : crypto.randomUUID(),
+          roleTitle: rc.roleTitle || rc.RoleTitle || "",
+          seniorityLevel: rc.seniorityLevel || rc.SeniorityLevel || "",
+          employmentStatus: rc.employmentStatus || rc.EmploymentStatus || "Dedicated",
+          quantity: rc.quantity || rc.Quantity || 0
+        };
+      });
       setRoles(mappedRoles);
       
-      setTeamMembers([...(project.Members || [])]);
+      const mappedMembers = (project.Members || []).map((m: any) => {
+        const mRoleCompId = m.roleCompositionId || m.RoleCompositionId;
+        const empId = m.id || m.Id;
+        
+        // Find employee data to re-verify matching during load
+        const emp = employees.find(e => (e as any).id === empId || (e as any).Id === empId);
+        let finalRoleCompId = (mRoleCompId && mRoleCompId !== ZERO_GUID) ? mRoleCompId : "";
+
+        if (emp && !finalRoleCompId) {
+            const empJobTitle = (emp as any).JobTitle || (emp as any).jobTitle || "";
+            const empSeniority = (emp as any).SeniorityLevel || (emp as any).seniorityLevel || "";
+            
+            const matchingRole = mappedRoles.find(r => 
+                r.roleTitle.toLowerCase().trim() === empJobTitle.toLowerCase().trim() && 
+                r.seniorityLevel.toLowerCase().trim() === empSeniority.toLowerCase().trim()
+            ) || mappedRoles.find(r => r.roleTitle.toLowerCase().trim() === empJobTitle.toLowerCase().trim());
+            
+            if (matchingRole) {
+                finalRoleCompId = matchingRole.id;
+            }
+        }
+
+        return {
+          ...m,
+          EmployeeId: empId,
+          RoleCompositionId: finalRoleCompId,
+          JobTitle: m.jobTitle || m.JobTitle,
+          RoleTitle: m.roleTitle || m.RoleTitle
+        };
+      });
+      setTeamMembers(mappedMembers);
     }
-  }, [project]);
+  }, [project, employees]);
 
   const isStartDateEditable = useMemo(() => {
     return project?.Status !== "InProgress";
@@ -132,7 +168,7 @@ export function EditProject() {
       id: crypto.randomUUID(), 
       roleTitle: "", 
       seniorityLevel: "Junior", 
-      employmentStatus: "dedicated", 
+      employmentStatus: "Dedicated", 
       quantity: 1 
     }]);
   };
@@ -179,20 +215,20 @@ export function EditProject() {
     setTeamMembers(teamMembers.filter((_, i) => i !== index));
   };
 
-  const handleTeamMemberChange = <K extends keyof ProjectMember>(
-    index: number,
-    field: K,
-    value: ProjectMember[K],
-  ) => {
-    const updatedMembers = [...teamMembers];
-    if (updatedMembers[index]) {
-      updatedMembers[index] = { ...updatedMembers[index], [field]: value };
-      setTeamMembers(updatedMembers);
-    }
+  const handleTeamMemberChange = (index: number, updates: Partial<ProjectMember>) => {
+    setTeamMembers(prev => {
+      const updated = [...prev];
+      if (updated[index]) {
+        updated[index] = { ...updated[index], ...updates };
+      }
+      return updated;
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const ZERO_GUID = "00000000-0000-0000-0000-000000000000";
 
     // "Only allow all field filled or nothing. Not half filled."
     const invalidRoles = roles.filter(r => !r.roleTitle || r.quantity < 1);
@@ -201,9 +237,13 @@ export function EditProject() {
       return;
     }
 
-    const invalidMembers = teamMembers.filter(m => !m.EmployeeId || !m.RoleCompositionId);
+    const invalidMembers = teamMembers.filter(m => 
+        !m.EmployeeId || 
+        !m.RoleCompositionId || 
+        m.RoleCompositionId === ZERO_GUID
+    );
     if (invalidMembers.length > 0) {
-      toast.error("Please complete all team member fields (including Role) or remove the incomplete member");
+      toast.error("Please complete all team member assignments. Each member must match a budget role.");
       return;
     }
 
@@ -323,8 +363,8 @@ export function EditProject() {
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
                   <h3 className="font-semibold text-blue-900 mb-2">Original Baseline</h3>
                   <div className="text-sm text-blue-800 space-y-1">
-                    <div>Expected Start: {project.ExpectedStartDate ? new Date(project.ExpectedStartDate).toLocaleDateString() : "N/A"}</div>
-                    <div>Estimated End: {project.EstimatedEndDate ? new Date(project.EstimatedEndDate).toLocaleDateString() : "N/A"}</div>
+                    <div>Expected Start: {formatDate(project.ExpectedStartDate)}</div>
+                    <div>Estimated End: {formatDate(project.EstimatedEndDate)}</div>
                   </div>
                 </div>
               </TabsContent>
@@ -409,14 +449,14 @@ export function EditProject() {
                             <Label>Allocation</Label>
                             <Select
                               value={role.employmentStatus}
-                              onValueChange={(value) => handleRoleChange(index, "employmentStatus", value as "dedicated" | "parallel")}
+                              onValueChange={(value) => handleRoleChange(index, "employmentStatus", value as "Dedicated" | "Parallel")}
                             >
                               <SelectTrigger>
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="dedicated">Dedicated (100%)</SelectItem>
-                                <SelectItem value="parallel">Parallel</SelectItem>
+                                <SelectItem value="Dedicated">Dedicated</SelectItem>
+                                <SelectItem value="Parallel">Parallel</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
@@ -463,74 +503,106 @@ export function EditProject() {
                   <div className="space-y-3">
                     {teamMembers.map((member, index) => {
                       return (
-                        <div key={member.Id} className="p-4 border rounded-lg space-y-3">
+                        <div key={member.Id || index} className="p-4 border rounded-lg space-y-4">
                           <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium text-gray-500">
-                              Assignment #{index + 1}
+                            <span className="text-sm font-medium text-gray-700">
+                              Member #{index + 1}
                             </span>
                             <Button
                               type="button"
                               variant="ghost"
                               size="sm"
                               onClick={() => handleRemoveTeamMember(index)}
-                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                              className="text-red-500 hover:text-red-600 hover:bg-red-50 gap-1.5"
                             >
                               <Trash2 className="h-4 w-4" />
+                              Remove
                             </Button>
                           </div>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+
+                          <div className="grid grid-cols-1 md:grid-cols-[2fr_1.5fr_0.5fr] gap-4 items-end">
                             <div className="space-y-2">
-                              <Label>Practitioner</Label>
+                              <Label className="text-xs font-semibold uppercase tracking-wider text-gray-500">Employee *</Label>
                               <Select
                                 value={member.EmployeeId}
                                 onValueChange={(value) => {
-                                  const emp = employees.find(e => e.Id === value);
+                                  const emp = employees.find(e => (e as any).Id === value || (e as any).id === value);
                                   if (emp) {
-                                    handleTeamMemberChange(index, "EmployeeId", value);
-                                    handleTeamMemberChange(index, "FullName", emp.FullName);
-                                    handleTeamMemberChange(index, "Email", emp.Email);
-                                    handleTeamMemberChange(index, "JobTitle", emp.JobTitle);
-                                    handleTeamMemberChange(index, "SeniorityLevel", emp.SeniorityLevel);
+                                    const empJobTitle = (emp as any).JobTitle || (emp as any).jobTitle || "";
+                                    const empSeniority = (emp as any).SeniorityLevel || (emp as any).seniorityLevel || "";
+                                    const empFullName = (emp as any).FullName || (emp as any).fullName || "";
+                                    const empEmail = (emp as any).Email || (emp as any).email || "";
+
+                                    // Automatic background matching for Role Composition (case-insensitive)
+                                    let matchingRole = roles.find(r => 
+                                      r.roleTitle.toLowerCase().trim() === empJobTitle.toLowerCase().trim() && 
+                                      r.seniorityLevel.toLowerCase().trim() === empSeniority.toLowerCase().trim()
+                                    );
+
+                                    // Fallback to Job Title only if exact seniority match not found
+                                    if (!matchingRole) {
+                                        matchingRole = roles.find(r => r.roleTitle.toLowerCase().trim() === empJobTitle.toLowerCase().trim());
+                                    }
+
+                                    if (!matchingRole && value) {
+                                        toast.error(`The job title "${empJobTitle}" does not match any role in the budget. Please add this role in the "Role Composition" tab first.`);
+                                    }
+
+                                    handleTeamMemberChange(index, {
+                                      EmployeeId: value,
+                                      FullName: empFullName,
+                                      Email: empEmail,
+                                      JobTitle: empJobTitle,
+                                      SeniorityLevel: empSeniority,
+                                      RoleCompositionId: matchingRole?.id || "",
+                                      RoleTitle: matchingRole?.roleTitle || ""
+                                    });
                                   }
                                 }}
                               >
-                                <SelectTrigger>
+                                <SelectTrigger className="bg-gray-50/50">
                                   <SelectValue placeholder="Select employee..." />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  {employees.map((emp) => (
-                                    <SelectItem key={emp.Id} value={emp.Id}>
-                                      {emp.FullName} - {emp.JobTitle}
+                                  {employees.map((emp: any) => (
+                                    <SelectItem key={emp.id || emp.Id} value={emp.id || emp.Id}>
+                                      {emp.fullName || emp.FullName} - {emp.jobTitle || emp.JobTitle} ({emp.seniorityLevel || emp.SeniorityLevel})
                                     </SelectItem>
                                   ))}
                                 </SelectContent>
                               </Select>
                             </div>
+
                             <div className="space-y-2">
-                              <Label>Filling Role (from Budget)</Label>
-                              <Select
-                                value={member.RoleCompositionId}
-                                onValueChange={(value) => {
-                                  const role = roles.find(r => r.id === value);
-                                  if (role) {
-                                    handleTeamMemberChange(index, "RoleCompositionId", value);
-                                    handleTeamMemberChange(index, "RoleTitle", role.roleTitle);
-                                  }
-                                }}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select role from budget..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {roles.map((role) => (
-                                    <SelectItem key={role.id} value={role.id}>
-                                      {role.roleTitle} ({role.seniorityLevel})
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
+                              <Label className="text-xs font-semibold uppercase tracking-wider text-gray-500">Role</Label>
+                              <div className="h-10 px-3 flex items-center bg-gray-50 border rounded-md text-gray-500 text-sm">
+                                {member.RoleTitle || member.JobTitle || (
+                                  <span className="text-gray-400 italic">Select employee to see role</span>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label className="text-xs font-semibold uppercase tracking-wider text-gray-500">Seniority</Label>
+                              <div className="h-10 flex items-center">
+                                {member.SeniorityLevel ? (
+                                  <Badge variant="outline" className="px-3 py-1 bg-white">
+                                    {member.SeniorityLevel}
+                                  </Badge>
+                                ) : (
+                                  <span className="text-xs text-gray-400">-</span>
+                                )}
+                              </div>
                             </div>
                           </div>
+
+                          {member.Email && (
+                            <div className="pt-1">
+                                <span className="text-sm text-gray-400 px-1 bg-gray-50 rounded">
+                                  {member.Email}
+                                </span>
+                            </div>
+                          )}
                         </div>
                       );
                     })}

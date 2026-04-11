@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { formatDate } from "@/functions/dateFormatter";
 import { useParams, useNavigate, useLocation } from "react-router";
 import { useAuth } from "@/contexts/auth-context";
 import { useData, ProjectMember, Seniority, UpdateProjectRequest } from "@/contexts/data-context";
@@ -148,7 +149,7 @@ export function AssignMembers() {
       await updateProject(project.Id, payload);
 
       toast.success("Project dates updated", {
-        description: `Start date changed to ${new Date(newDateStr).toLocaleDateString()}`,
+        description: `Start date changed to ${formatDate(newDateStr)}`,
       });
       
       setActualStartDate(newDateStr);
@@ -296,7 +297,7 @@ export function AssignMembers() {
                     <Label className="text-sm text-gray-600">Expected Start Date (from Marketing)</Label>
                     <Input
                       type="text"
-                      value={project.ExpectedStartDate ? new Date(project.ExpectedStartDate).toLocaleDateString() : "Not set"}
+                      value={formatDate(project.ExpectedStartDate)}
                       disabled
                       className="bg-gray-50"
                     />
@@ -335,7 +336,7 @@ export function AssignMembers() {
                             {unavailable.seniorityLevel} {unavailable.roleTitle}
                           </div>
                           <div className="text-gray-600 mt-1">
-                            Current Date used for planning: {new Date(unavailable.availableDate).toLocaleDateString()}
+                            Current Date used for planning: {formatDate(unavailable.availableDate)}
                           </div>
                         </div>
                       ))}
@@ -349,7 +350,7 @@ export function AssignMembers() {
                               Recommended Start Date
                             </div>
                             <div className="text-sm text-gray-700 mt-1">
-                                {new Date(resourceAvailability.recommendedStartDate).toLocaleDateString()}
+                                {formatDate(resourceAvailability.recommendedStartDate)}
                             </div>
                           </div>
                           <Button

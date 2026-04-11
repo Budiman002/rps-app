@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { formatDate } from "@/functions/dateFormatter";
 import { useNavigate } from "react-router";
 import { useAuth } from "@/contexts/auth-context";
 import { useData } from "@/contexts/data-context";
@@ -50,12 +51,6 @@ export function Dashboard() {
     };
   }, [projects]);
 
-  const formatDate = (date: string | null | undefined) => {
-    if (!date) return "-";
-    const d = new Date(date);
-    if (isNaN(d.getTime())) return date;
-    return `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`;
-  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {

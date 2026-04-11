@@ -1,3 +1,4 @@
+using System.IdentityModel.Tokens.Jwt;
 using System.Text;
 using FluentValidation;
 using FluentValidation.AspNetCore;
@@ -12,6 +13,8 @@ using RPS.Commons.RequestHandlers.Auth;
 using RPS.Entities;
 
 var builder = WebApplication.CreateBuilder(args);
+
+JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
 
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
