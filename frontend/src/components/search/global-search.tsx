@@ -36,16 +36,16 @@ export function GlobalSearch({ onEmployeeSelect, placeholder = "Search projects 
     // Search projects
     const matchingProjects = projects.filter(
       (project) =>
-        project.name.toLowerCase().includes(lowerQuery) ||
-        project.clientName.toLowerCase().includes(lowerQuery)
+        project.Name.toLowerCase().includes(lowerQuery) ||
+        project.ClientName.toLowerCase().includes(lowerQuery)
     );
 
     // Search employees
     const matchingEmployees = employees.filter(
       (employee) =>
-        employee.fullName.toLowerCase().includes(lowerQuery) ||
-        employee.email.toLowerCase().includes(lowerQuery) ||
-        employee.jobTitle.toLowerCase().includes(lowerQuery)
+        employee.FullName.toLowerCase().includes(lowerQuery) ||
+        employee.Email.toLowerCase().includes(lowerQuery) ||
+        employee.JobTitle.toLowerCase().includes(lowerQuery)
     );
 
     return {
@@ -82,7 +82,7 @@ export function GlobalSearch({ onEmployeeSelect, placeholder = "Search projects 
   // Get employee projects count
   const getEmployeeProjectCount = (employeeId: string) => {
     return projects.filter(
-      (p) => p.assignedPmId === employeeId || p.members?.some((t) => t.employeeId === employeeId)
+      (p) => p.AssignedPmId === employeeId || p.Members?.some((m) => m.EmployeeId === employeeId)
     ).length;
   };
 
@@ -121,25 +121,25 @@ export function GlobalSearch({ onEmployeeSelect, placeholder = "Search projects 
               </div>
               {searchResults.projects.map((project) => (
                 <button
-                  key={project.id}
-                  onClick={() => handleProjectClick(project.id)}
+                  key={project.Id}
+                  onClick={() => handleProjectClick(project.Id)}
                   className="w-full text-left px-3 py-2 hover:bg-gray-50 rounded-md flex items-start gap-3 transition-colors"
                 >
                   <FolderKanban className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
                   <div className="flex-1 min-w-0">
-                    <div className="font-medium text-sm truncate">{project.name}</div>
-                    <div className="text-xs text-gray-500 truncate">{project.clientName}</div>
+                    <div className="font-medium text-sm truncate">{project.Name}</div>
+                    <div className="text-xs text-gray-500 truncate">{project.ClientName}</div>
                     <div className="flex items-center gap-2 mt-1">
-                      {project.status === "scheduled" && (
-                        <Badge className="bg-purple-500 text-xs">Scheduled</Badge>
+                      {project.Status === "Scheduled" && (
+                        <Badge className="bg-purple-500 text-xs text-white">Scheduled</Badge>
                       )}
-                      {project.status === "in-progress" && (
-                        <Badge className="bg-blue-500 text-xs">In Progress</Badge>
+                      {project.Status === "InProgress" && (
+                        <Badge className="bg-blue-500 text-xs text-white">In Progress</Badge>
                       )}
-                      {project.status === "completed" && (
-                        <Badge className="bg-green-500 text-xs">Completed</Badge>
+                      {project.Status === "Complete" && (
+                        <Badge className="bg-green-500 text-xs text-white">Completed</Badge>
                       )}
-                      {project.status === "unassigned" && (
+                      {project.Status === "Unassigned" && (
                         <Badge variant="secondary" className="text-xs">Unassigned</Badge>
                       )}
                     </div>
@@ -156,20 +156,20 @@ export function GlobalSearch({ onEmployeeSelect, placeholder = "Search projects 
                 Employees ({searchResults.employees.length})
               </div>
               {searchResults.employees.map((employee) => {
-                const projectCount = getEmployeeProjectCount(employee.id);
+                const projectCount = getEmployeeProjectCount(employee.Id);
                 return (
                   <button
-                    key={employee.id}
-                    onClick={() => handleEmployeeClick(employee.id)}
+                    key={employee.Id}
+                    onClick={() => handleEmployeeClick(employee.Id)}
                     className="w-full text-left px-3 py-2 hover:bg-gray-50 rounded-md flex items-start gap-3 transition-colors"
                   >
                     <User className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <div className="font-medium text-sm truncate">{employee.fullName}</div>
-                      <div className="text-xs text-gray-500 truncate">{employee.email}</div>
+                      <div className="font-medium text-sm truncate">{employee.FullName}</div>
+                      <div className="text-xs text-gray-500 truncate">{employee.Email}</div>
                       <div className="flex items-center gap-2 mt-1">
                         <Badge variant="outline" className="text-xs capitalize">
-                          {employee.jobTitle}
+                          {employee.JobTitle}
                         </Badge>
                         {projectCount > 0 && (
                           <span className="text-xs text-gray-500">
@@ -195,4 +195,3 @@ export function GlobalSearch({ onEmployeeSelect, placeholder = "Search projects 
     </div>
   );
 }
-

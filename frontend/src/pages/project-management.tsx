@@ -15,80 +15,95 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Search, Edit, Users, UserPlus, FileEdit } from "lucide-react";
+import { Plus, Search, Edit, Users, UserPlus, FileEdit, Eye, History } from "lucide-react";
+import { ChangeRequestsSection } from "@/components/project-change-requests/change-requests-section";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 export function ProjectManagement() {
   const { user } = useAuth();
   const { projects, employees } = useData();
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedProjectIdForHistory, setSelectedProjectIdForHistory] = useState<string | null>(null);
 
-  // Get PM's projects if user is PM
-  const pmEmployee = employees.find(e => e.email === user?.email);
-  const myProjects = user?.role === "PM" 
-    ? projects.filter(p => p.assignedPmId === pmEmployee?.id && p.status !== "unassigned")
-    : [];
+  const selectedProjectForHistory = projects.find(p => p.Id === selectedProjectIdForHistory);
 
-  const allProjects = user?.role === "PM" ? myProjects : projects;
-  const unassignedProjects = projects.filter(p => p.status === "unassigned");
+  // Filter projects logic
+  const allProjects = projects;
+  const unassignedProjects = projects.filter(p => p.Status === "Unassigned");
 
   const filteredAllProjects = useMemo(() => {
     return allProjects.filter(project =>
-      project.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      project.clientName.toLowerCase().includes(searchQuery.toLowerCase())
+      project.Name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      project.ClientName?.toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [allProjects, searchQuery]);
 
   const filteredUnassignedProjects = useMemo(() => {
     return unassignedProjects.filter(project =>
-      project.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      project.clientName.toLowerCase().includes(searchQuery.toLowerCase())
+      project.Name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      project.ClientName?.toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [unassignedProjects, searchQuery]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case "scheduled":
-        return <Badge className="bg-purple-500">Scheduled</Badge>;
-      case "in-progress":
+      case "Scheduled":
+        return <Badge className="bg-slate-400">Scheduled</Badge>;
+      case "InProgress":
         return <Badge className="bg-blue-500">In Progress</Badge>;
-      case "completed":
-        return <Badge className="bg-green-500">Completed</Badge>;
-      case "unassigned":
+      case "Complete":
+        return <Badge className="bg-emerald-500">Completed</Badge>;
+      case "Unassigned":
         return <Badge variant="secondary">Unassigned</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
   };
 
+  const formatDate = (dateString: string | undefined) => {
+    if (!dateString) return "-";
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return dateString;
+    const day = String(date.getDate()).padStart(2, "0");
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const year = date.getFullYear();
+    return `${day}-${month}-${year}`;
+  };
+
   const renderProjectRow = (project: Project, showAssignButton = false) => (
-    <TableRow key={project.id}>
+    <TableRow key={project.Id}>
       <TableCell
         className="font-medium cursor-pointer hover:text-blue-600"
-        onClick={() => navigate(`/app/projects/${project.id}`, { state: { from: '/app/projects' } })}
+        onClick={() => navigate(`/app/projects/${project.Id}`, { state: { from: '/app/projects' } })}
       >
-        {project.name}
+        {project.Name}
       </TableCell>
-      <TableCell>{project.clientName}</TableCell>
-      <TableCell>{getStatusBadge(project.status)}</TableCell>
+      <TableCell>{project.ClientName}</TableCell>
+      <TableCell>{getStatusBadge(project.Status)}</TableCell>
       <TableCell>
-        {project.actualStartDate || project.expectedStartDate || "-"} - {project.endDate || project.estimatedEndDate || "-"}
+        {formatDate(project.ActualStartDate || project.ExpectedStartDate)} - {formatDate(project.EndDate || project.EstimatedEndDate)}
       </TableCell>
-      <TableCell>{project.durationWeeks}w</TableCell>
+      <TableCell>{project.DurationWeeks}w</TableCell>
       <TableCell>
         <div className="flex items-center gap-1">
           <Users className="h-4 w-4 text-gray-400" />
           <span>
-            {project.members?.length || 0}/
-                            {project.roleCompositions.reduce((sum, t) => sum + t.quantity, 0)}
+            {project.Members?.length || 0}/
+            {project.RoleCompositions?.reduce((sum, t) => sum + t.Quantity, 0) || 0}
           </span>
         </div>
       </TableCell>
       {(user?.role === "GM" || user?.role === "Marketing") && (
         <TableCell>
-          {project.requestChanges && project.requestChanges.filter((r) => r.status === "pending").length > 0 ? (
+          {project.RequestChanges && project.RequestChanges.filter((r) => r.Status === "pending").length > 0 ? (
             <Badge variant="outline" className="text-orange-600 border-orange-600">
-              {project.requestChanges.filter((r) => r.status === "pending").length} Pending
+              {project.RequestChanges.filter((r) => r.Status === "pending").length} Pending
             </Badge>
           ) : (
             <span className="text-gray-400">-</span>
@@ -96,11 +111,11 @@ export function ProjectManagement() {
         </TableCell>
       )}
       <TableCell className="text-right">
-        <div className="flex justify-end gap-2">
+        <div className="flex justify-end gap-1">
           {showAssignButton && user?.role === "GM" ? (
             <Button
               size="sm"
-              onClick={() => navigate(`/app/projects/${project.id}/assign`, { state: { from: '/app/projects' } })}
+              onClick={() => navigate(`/app/projects/${project.Id}/assign`, { state: { from: '/app/projects' } })}
               className="gap-2"
             >
               <UserPlus className="h-4 w-4" />
@@ -108,12 +123,12 @@ export function ProjectManagement() {
             </Button>
           ) : (
             <>
-              {user?.role === "PM" && (project.status === "scheduled" || project.status === "in-progress") && (
+              {user?.role === "PM" && (project.Status === "Scheduled" || project.Status === "InProgress") && (
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={() =>
-                    navigate(`/app/projects/${project.id}`, {
+                    navigate(`/app/projects/${project.Id}`, {
                       state: {
                         from: "/app/projects",
                         openRequestModal: true,
@@ -125,11 +140,30 @@ export function ProjectManagement() {
                   <FileEdit className="h-4 w-4 text-orange-600" />
                 </Button>
               )}
+              {user?.role === "PM" && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setSelectedProjectIdForHistory(project.Id)}
+                  title="View Request History"
+                >
+                  <History className="h-4 w-4 text-blue-600" />
+                </Button>
+              )}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => navigate(`/app/projects/${project.Id}`, { state: { from: '/app/projects' } })}
+                title="View Details"
+              >
+                <Eye className="h-4 w-4" />
+              </Button>
               {user?.role === "GM" && (
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => navigate(`/app/projects/${project.id}/edit`, { state: { from: '/app/projects' } })}
+                  onClick={() => navigate(`/app/projects/${project.Id}/edit`, { state: { from: '/app/projects' } })}
+                  title="Edit Project"
                 >
                   <Edit className="h-4 w-4" />
                 </Button>
@@ -175,6 +209,12 @@ export function ProjectManagement() {
       </div>
 
       <Tabs defaultValue="all" className="w-full">
+        <TabsList>
+          <TabsTrigger value="all">All Projects</TabsTrigger>
+          {user?.role === "GM" && (
+            <TabsTrigger value="unassigned">Unassigned</TabsTrigger>
+          )}
+        </TabsList>
 
         <TabsContent value="all" className="mt-6">
           <Card>
@@ -284,7 +324,22 @@ export function ProjectManagement() {
           </TabsContent>
         )}
       </Tabs>
+
+      {/* Request History Dialog */}
+      <Dialog open={!!selectedProjectIdForHistory} onOpenChange={(open) => !open && setSelectedProjectIdForHistory(null)}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Request History - {selectedProjectForHistory?.Name}</DialogTitle>
+          </DialogHeader>
+          <div className="mt-4">
+            <ChangeRequestsSection 
+              requests={selectedProjectForHistory?.RequestChanges || []} 
+              employees={employees}
+              canManage={false}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
-

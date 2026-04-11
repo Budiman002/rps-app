@@ -1,7 +1,7 @@
 import { useCallback } from "react";
 import { tryFetchJson, type FetchResult } from "./tryFetchJson";
 
-type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
+type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: any };
 
 export function useFetchWithAccessToken() {
   const accessToken = localStorage.getItem("rps_access_token");

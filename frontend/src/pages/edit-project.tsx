@@ -21,17 +21,23 @@ export function EditProject() {
   const location = useLocation();
   const rpsApi = useRpsApi();
 
-  const project = projects.find(p => p.id === id);
+  const project = projects.find(p => p.Id === id);
 
-  // Type helper
-  type RoleComposition = Project["roleCompositions"][number];
-
+  // Type helper for local selection state
+  type RoleCompositionLocal = { 
+    id: string; // local id for keying
+    roleTitle: string; 
+    seniorityLevel: Seniority; 
+    employmentStatus: "dedicated" | "parallel"; 
+    quantity: number 
+  };
+  
   // Timeline state
   const [startDate, setStartDate] = useState("");
   const [duration, setDuration] = useState("");
 
   // Role composition state
-  const [roles, setRoles] = useState<RoleComposition[]>([]);
+  const [roles, setRoles] = useState<RoleCompositionLocal[]>([]);
 
   // Team members state
   const [teamMembers, setTeamMembers] = useState<ProjectMember[]>([]);
@@ -40,10 +46,19 @@ export function EditProject() {
 
   useEffect(() => {
     if (project) {
-      setStartDate(project.actualStartDate || project.expectedStartDate);
-      setDuration(String(project.durationWeeks));
-      setRoles([...project.roleCompositions]);
-      setTeamMembers([...(project.members || [])]);
+      setStartDate(project.ActualStartDate || project.ExpectedStartDate || "");
+      setDuration(String(project.DurationWeeks || 0));
+      
+      const mappedRoles = (project.RoleCompositions || []).map(rc => ({
+        id: rc.Id || `RC${Math.random()}`,
+        roleTitle: rc.RoleTitle,
+        seniorityLevel: rc.SeniorityLevel,
+        employmentStatus: rc.EmploymentStatus,
+        quantity: rc.Quantity
+      }));
+      setRoles(mappedRoles);
+      
+      setTeamMembers([...(project.Members || [])]);
     }
   }, [project]);
 
@@ -75,24 +90,30 @@ export function EditProject() {
   };
 
   // Role composition handlers
-  type ProjectMemberEditable = ProjectMember;
-
   const handleAddRole = () => {
-    setRoles([...roles, { id: `RC${Date.now()}`, roleTitle: "", seniorityLevel: "junior", employmentStatus: "dedicated", quantity: 1 }]);
+    setRoles([...roles, { 
+      id: `RC${Date.now()}`, 
+      roleTitle: "", 
+      seniorityLevel: "Junior", 
+      employmentStatus: "dedicated", 
+      quantity: 1 
+    }]);
   };
 
   const handleRemoveRole = (index: number) => {
     setRoles(roles.filter((_, i) => i !== index));
   };
 
-  const handleRoleChange = <K extends keyof RoleComposition>(
+  const handleRoleChange = <K extends keyof RoleCompositionLocal>(
     index: number,
     field: K,
-    value: RoleComposition[K],
+    value: RoleCompositionLocal[K],
   ) => {
     const updatedRoles = [...roles];
-    updatedRoles[index] = { ...updatedRoles[index], [field]: value } as RoleComposition;
-    setRoles(updatedRoles);
+    if (updatedRoles[index]) {
+      updatedRoles[index] = { ...updatedRoles[index], [field]: value };
+      setRoles(updatedRoles);
+    }
   };
 
   // Team member handlers
@@ -100,14 +121,14 @@ export function EditProject() {
     setTeamMembers([
       ...teamMembers,
       { 
-        id: `TM${Date.now()}`, 
-        employeeId: "", 
-        fullName: "", 
-        email: "", 
-        jobTitle: "", 
-        seniorityLevel: "junior",
-        roleCompositionId: "",
-        roleTitle: ""
+        Id: `TM${Date.now()}`, 
+        EmployeeId: "", 
+        FullName: "", 
+        Email: "", 
+        JobTitle: "", 
+        SeniorityLevel: "Junior",
+        RoleCompositionId: "",
+        RoleTitle: ""
       }
     ]);
   };
@@ -116,14 +137,16 @@ export function EditProject() {
     setTeamMembers(teamMembers.filter((_, i) => i !== index));
   };
 
-  const handleTeamMemberChange = <K extends keyof ProjectMemberEditable>(
+  const handleTeamMemberChange = <K extends keyof ProjectMember>(
     index: number,
     field: K,
-    value: ProjectMemberEditable[K],
+    value: ProjectMember[K],
   ) => {
     const updatedMembers = [...teamMembers];
-    updatedMembers[index] = { ...updatedMembers[index], [field]: value } as ProjectMember;
-    setTeamMembers(updatedMembers);
+    if (updatedMembers[index]) {
+      updatedMembers[index] = { ...updatedMembers[index], [field]: value };
+      setTeamMembers(updatedMembers);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -142,7 +165,7 @@ export function EditProject() {
     }
 
     // Validate team members
-    const invalidMembers = teamMembers.filter(m => !m.employeeId || !m.roleTitle);
+    const invalidMembers = teamMembers.filter(m => !m.EmployeeId || !m.RoleTitle);
     if (invalidMembers.length > 0) {
       toast.error("Please complete all team member fields");
       return;
@@ -154,23 +177,21 @@ export function EditProject() {
       const endDate = calculateEndDate(startDate, durationWeeks);
 
       const payload = {
-        actualStartDate: startDate,
-        durationWeeks,
-        endDate,
-        roleCompositions: roles,
-        members: teamMembers,
+        ActualStartDate: startDate,
+        DurationWeeks: durationWeeks,
+        EndDate: endDate,
+        RoleCompositions: roles.map(r => ({
+          RoleTitle: r.roleTitle,
+          SeniorityLevel: r.seniorityLevel,
+          EmploymentStatus: r.employmentStatus,
+          Quantity: r.quantity
+        })),
+        Members: teamMembers,
       };
 
-      const result = await rpsApi.updateProject(project.id, payload);
-
-      if (result.data) {
-        // Update local mock state if necessary for immediate UI reflection
-        updateProject(project.id, payload);
-        toast.success("Project updated successfully");
-        navigate(`/app/projects/${project.id}`, { state: { from: location.state?.from } });
-      } else {
-        toast.error(result.error || "Failed to update project");
-      }
+      await updateProject(project.Id, payload);
+      toast.success("Project updated successfully");
+      navigate(`/app/projects/${project.Id}`, { state: { from: location.state?.from } });
     } catch (error) {
       toast.error("An unexpected error occurred");
     } finally {
@@ -189,7 +210,7 @@ export function EditProject() {
     "DevOps Engineer",
   ];
 
-  const seniorities: Seniority[] = ["intern", "junior", "senior"];
+  const seniorities: Seniority[] = ["Intern", "Junior", "Senior"];
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
@@ -197,7 +218,7 @@ export function EditProject() {
         <Button
           variant="ghost"
           className="gap-2 mb-4"
-          onClick={() => navigate(`/app/projects/${project.id}`, { state: { from: location.state?.from } })}
+          onClick={() => navigate(`/app/projects/${project.Id}`, { state: { from: location.state?.from } })}
         >
           <ArrowLeft className="h-4 w-4" />
           Back to Project
@@ -209,9 +230,9 @@ export function EditProject() {
       <form onSubmit={handleSubmit}>
         <Card>
           <CardHeader>
-            <CardTitle>{project.name}</CardTitle>
+            <CardTitle>{project.Name}</CardTitle>
             <CardDescription>
-              Client: {project.clientName}
+              Client: {project.ClientName}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -264,9 +285,9 @@ export function EditProject() {
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                   <h3 className="font-semibold text-blue-900 mb-2">Current Timeline</h3>
                   <div className="text-sm text-blue-800 space-y-1">
-                    <div>Start: {project.actualStartDate || project.expectedStartDate}</div>
-                    <div>End: {project.endDate || project.estimatedEndDate}</div>
-                    <div>Duration: {project.durationWeeks} weeks</div>
+                    <div>Start: {project.ActualStartDate || project.ExpectedStartDate}</div>
+                    <div>End: {project.EndDate || project.EstimatedEndDate}</div>
+                    <div>Duration: {project.DurationWeeks} weeks</div>
                   </div>
                 </div>
               </TabsContent>
@@ -305,7 +326,7 @@ export function EditProject() {
                 ) : (
                   <div className="space-y-3">
                     {roles.map((role, index) => (
-                      <div key={index} className="p-4 border rounded-lg space-y-3">
+                      <div key={role.id} className="p-4 border rounded-lg space-y-3">
                         <div className="flex items-center justify-between">
                           <span className="text-sm font-medium text-gray-500">
                             Role #{index + 1}
@@ -350,11 +371,9 @@ export function EditProject() {
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                {seniorities.map((s) => (
-                                  <SelectItem key={s} value={s} className="capitalize">
-                                    {s}
-                                  </SelectItem>
-                                ))}
+                                <SelectItem value="Intern">Intern</SelectItem>
+                                <SelectItem value="Junior">Junior</SelectItem>
+                                <SelectItem value="Senior">Senior</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
@@ -424,9 +443,9 @@ export function EditProject() {
                 ) : (
                   <div className="space-y-3">
                     {teamMembers.map((member, index) => {
-                      const employee = employees.find(e => e.id === member.employeeId);
+                      const employee = employees.find(e => e.Id === member.EmployeeId);
                       return (
-                        <div key={member.id} className="p-4 border rounded-lg space-y-3">
+                        <div key={member.Id} className="p-4 border rounded-lg space-y-3">
                           <div className="flex items-center justify-between">
                             <span className="text-sm font-medium text-gray-500">
                               Member #{index + 1}
@@ -446,16 +465,16 @@ export function EditProject() {
                             <div className="space-y-2">
                               <Label htmlFor={`employee-${index}`}>Employee *</Label>
                               <Select
-                                value={member.employeeId}
+                                value={member.EmployeeId}
                                 onValueChange={(value) => {
-                                  const emp = employees.find(e => e.id === value);
+                                  const emp = employees.find(e => e.Id === value);
                                   if (emp) {
-                                    handleTeamMemberChange(index, "employeeId", value);
-                                    handleTeamMemberChange(index, "fullName", emp.fullName);
-                                    handleTeamMemberChange(index, "email", emp.email);
-                                    handleTeamMemberChange(index, "jobTitle", emp.jobTitle);
-                                    handleTeamMemberChange(index, "roleTitle", emp.jobTitle);
-                                    handleTeamMemberChange(index, "seniorityLevel", emp.seniorityLevel);
+                                    handleTeamMemberChange(index, "EmployeeId", value);
+                                    handleTeamMemberChange(index, "FullName", emp.FullName);
+                                    handleTeamMemberChange(index, "Email", emp.Email);
+                                    handleTeamMemberChange(index, "JobTitle", emp.JobTitle);
+                                    handleTeamMemberChange(index, "RoleTitle", emp.JobTitle);
+                                    handleTeamMemberChange(index, "SeniorityLevel", emp.SeniorityLevel);
                                   }
                                 }}
                               >
@@ -464,8 +483,8 @@ export function EditProject() {
                                 </SelectTrigger>
                                 <SelectContent>
                                   {employees.map((emp) => (
-                                    <SelectItem key={emp.id} value={emp.id}>
-                                      {emp.fullName} - {emp.jobTitle} ({emp.seniorityLevel})
+                                    <SelectItem key={emp.Id} value={emp.Id}>
+                                      {emp.FullName} - {emp.JobTitle} ({emp.SeniorityLevel})
                                     </SelectItem>
                                   ))}
                                 </SelectContent>
@@ -474,7 +493,7 @@ export function EditProject() {
                             <div className="space-y-2">
                               <Label>Role</Label>
                               <Input
-                                value={member.roleTitle}
+                                value={member.RoleTitle}
                                 disabled
                                 placeholder="Auto-filled"
                               />
@@ -482,13 +501,13 @@ export function EditProject() {
                             <div className="space-y-2">
                               <Label>Seniority</Label>
                               <Badge variant="outline" className="mt-2 capitalize">
-                                {member.seniorityLevel}
+                                {member.SeniorityLevel}
                               </Badge>
                             </div>
                           </div>
                           {employee && (
                             <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
-                              {employee.email}
+                              {employee.Email}
                             </div>
                           )}
                         </div>
@@ -505,7 +524,7 @@ export function EditProject() {
           <Button
             type="button"
             variant="outline"
-            onClick={() => navigate(`/app/projects/${project.id}`, { state: { from: location.state?.from } })}
+            onClick={() => navigate(`/app/projects/${project.Id}`, { state: { from: location.state?.from } })}
           >
             Cancel
           </Button>
@@ -517,5 +536,3 @@ export function EditProject() {
     </div>
   );
 }
-
-

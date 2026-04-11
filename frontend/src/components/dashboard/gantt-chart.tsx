@@ -10,7 +10,10 @@ interface GanttChartProps {
 export function GanttChart({ projects }: GanttChartProps) {
   const { timeline, monthHeaders } = useMemo(() => {
     // Filter projects with dates
-    const projectsWithDates = projects.filter(p => p.actualStartDate && p.endDate);
+    const projectsWithDates = projects.filter(p => 
+      (p.ActualStartDate || p.ExpectedStartDate) && 
+      (p.EndDate || p.EstimatedEndDate)
+    );
     
     if (projectsWithDates.length === 0) {
       return { timeline: [], monthHeaders: [] };
@@ -18,8 +21,8 @@ export function GanttChart({ projects }: GanttChartProps) {
 
     // Find min and max dates
     const allDates = projectsWithDates.flatMap(p => [
-      new Date(p.actualStartDate!),
-      new Date(p.endDate!),
+      new Date(p.ActualStartDate || p.ExpectedStartDate!),
+      new Date(p.EndDate || p.EstimatedEndDate!),
     ]);
     const minDate = new Date(Math.min(...allDates.map(d => d.getTime())));
     const maxDate = new Date(Math.max(...allDates.map(d => d.getTime())));
@@ -49,8 +52,8 @@ export function GanttChart({ projects }: GanttChartProps) {
 
     // Create timeline bars
     const timeline = projectsWithDates.map(project => {
-      const projectStart = new Date(project.actualStartDate!);
-      const projectEnd = new Date(project.endDate!);
+      const projectStart = new Date(project.ActualStartDate || project.ExpectedStartDate!);
+      const projectEnd = new Date(project.EndDate || project.EstimatedEndDate!);
       
       const startOffset = Math.ceil((projectStart.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
       const duration = Math.ceil((projectEnd.getTime() - projectStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
@@ -85,14 +88,14 @@ export function GanttChart({ projects }: GanttChartProps) {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "scheduled":
-        return "bg-purple-500";
-      case "in-progress":
+      case "Scheduled":
+        return "bg-slate-400";
+      case "InProgress":
         return "bg-blue-500";
-      case "completed":
-        return "bg-green-500";
+      case "Complete":
+        return "bg-emerald-500";
       default:
-        return "bg-gray-400";
+        return "bg-zinc-300";
     }
   };
 
@@ -120,31 +123,31 @@ export function GanttChart({ projects }: GanttChartProps) {
             {/* Timeline bars */}
             <div className="space-y-3">
               {timeline.map(({ project, leftPercent, widthPercent }) => (
-                <div key={project.id} className="relative">
+                <div key={project.Id} className="relative">
                   <div className="flex items-center mb-1">
                     <div className="w-48 flex-shrink-0 pr-4">
-                      <div className="text-sm font-medium truncate">{project.name}</div>
-                      <div className="text-xs text-gray-500 truncate">{project.clientName}</div>
+                      <div className="text-sm font-medium truncate">{project.Name}</div>
+                      <div className="text-xs text-gray-500 truncate">{project.ClientName}</div>
                     </div>
                     <div className="flex-1 relative h-8 bg-gray-100 rounded">
                       <div
-                        className={`absolute h-full ${getStatusColor(project.status)} rounded flex items-center justify-center transition-all`}
+                        className={`absolute h-full ${getStatusColor(project.Status)} rounded flex items-center justify-center transition-all`}
                         style={{
                           left: `${leftPercent}%`,
                           width: `${widthPercent}%`,
                         }}
                       >
                         <span className="text-xs text-white font-medium px-2 truncate">
-                          {project.durationWeeks}w
+                          {project.DurationWeeks}w
                         </span>
                       </div>
                     </div>
                     <div className="w-32 flex-shrink-0 pl-4">
                       <Badge
-                        variant={project.status === "in-progress" || project.status === "scheduled" ? "default" : "secondary"}
+                        variant={project.Status === "InProgress" || project.Status === "Scheduled" ? "default" : "secondary"}
                         className="text-xs capitalize"
                       >
-                        {project.status === "in-progress" ? "In Progress" : project.status === "scheduled" ? "Scheduled" : project.status}
+                        {project.Status === "InProgress" ? "In Progress" : project.Status === "Scheduled" ? "Scheduled" : project.Status}
                       </Badge>
                     </div>
                   </div>
@@ -155,15 +158,19 @@ export function GanttChart({ projects }: GanttChartProps) {
             {/* Legend */}
             <div className="flex items-center gap-6 mt-6 pt-4 border-t">
               <div className="flex items-center gap-2">
+                <div className="w-4 h-4 bg-slate-400 rounded"></div>
+                <span className="text-xs text-gray-600">Scheduled</span>
+              </div>
+              <div className="flex items-center gap-2">
                 <div className="w-4 h-4 bg-blue-500 rounded"></div>
                 <span className="text-xs text-gray-600">In Progress</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 bg-green-500 rounded"></div>
+                <div className="w-4 h-4 bg-emerald-500 rounded"></div>
                 <span className="text-xs text-gray-600">Completed</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 bg-gray-400 rounded"></div>
+                <div className="w-4 h-4 bg-zinc-300 rounded"></div>
                 <span className="text-xs text-gray-600">Unassigned</span>
               </div>
             </div>
@@ -173,5 +180,3 @@ export function GanttChart({ projects }: GanttChartProps) {
     </Card>
   );
 }
-
-

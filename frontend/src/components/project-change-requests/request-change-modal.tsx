@@ -40,7 +40,11 @@ export function RequestChangeModal({ open, onOpenChange, project, employees, onS
   };
 
   const parseISODate = (value: string) => {
-    const [year, month, day] = value.split("-").map(Number);
+    if (!value) return null;
+    const parts = value.split("T");
+    const dateOnly = parts[0];
+    if (!dateOnly) return null;
+    const [year, month, day] = dateOnly.split("-").map(Number);
     if (!year || !month || !day) return null;
     const date = new Date(year, month - 1, day);
     date.setHours(0, 0, 0, 0);
@@ -61,7 +65,7 @@ export function RequestChangeModal({ open, onOpenChange, project, employees, onS
     const day = String(date.getDate()).padStart(2, "0");
     const month = String(date.getMonth() + 1).padStart(2, "0");
     const year = date.getFullYear();
-    return `${day}/${month}/${year}`;
+    return `${day}-${month}-${year}`;
   };
 
   const getDurationWeeks = (start: string, end: string) => {
@@ -83,13 +87,13 @@ export function RequestChangeModal({ open, onOpenChange, project, employees, onS
     return formatISODate(tomorrow);
   }, []);
 
-  const currentStartDate = project.startDate || project.expectedStartDate;
-  const currentEndDate = project.endDate || project.estimatedEndDate;
+  const currentStartDate = project.ActualStartDate || project.ExpectedStartDate;
+  const currentEndDate = project.EndDate || project.EstimatedEndDate;
 
   // Timeline changes
   const [newStartDate, setNewStartDate] = useState(currentStartDate);
   const [newEndDate, setNewEndDate] = useState(currentEndDate);
-  const [newDuration, setNewDuration] = useState(project.duration);
+  const [newDuration, setNewDuration] = useState(project.DurationWeeks);
 
   // Role changes
   const [roleChanges, setRoleChanges] = useState<{
@@ -120,10 +124,10 @@ export function RequestChangeModal({ open, onOpenChange, project, employees, onS
     setIncludeEmployees(false);
     setNewStartDate(currentStartDate);
     setNewEndDate(currentEndDate);
-    setNewDuration(project.duration);
+    setNewDuration(project.DurationWeeks);
     setRoleChanges({ added: [], removed: [], modified: [] });
     setEmployeeChanges({ added: [], removed: [] });
-  }, [open, currentStartDate, currentEndDate, project.duration]);
+  }, [open, currentStartDate, currentEndDate, project.DurationWeeks]);
 
   const endDateMin = addDays(newStartDate, 1);
 
@@ -164,8 +168,6 @@ export function RequestChangeModal({ open, onOpenChange, project, employees, onS
       return;
     }
 
-    const changes: NonNullable<ChangeRequest["changes"]> = {};
-
     const selectedSections: Array<"timeline" | "roles" | "employees"> = [];
 
     if (includeTimeline) {
@@ -182,21 +184,13 @@ export function RequestChangeModal({ open, onOpenChange, project, employees, onS
       const timelineChanged =
         newStartDate !== currentStartDate ||
         newEndDate !== currentEndDate ||
-        newDuration !== project.duration;
+        newDuration !== project.DurationWeeks;
 
       if (!timelineChanged) {
         toast.error("Timeline section is selected but no timeline change was made");
         return;
       }
 
-      changes.timeline = {
-        oldStartDate: currentStartDate,
-        newStartDate,
-        oldEndDate: currentEndDate,
-        newEndDate,
-        oldDuration: project.duration,
-        newDuration,
-      };
       selectedSections.push("timeline");
     }
 
@@ -210,11 +204,6 @@ export function RequestChangeModal({ open, onOpenChange, project, employees, onS
         return;
       }
 
-      changes.roles = {
-        added: cleanedAdded,
-        removed: cleanedRemoved,
-        modified: cleanedModified,
-      };
       selectedSections.push("roles");
     }
 
@@ -227,24 +216,31 @@ export function RequestChangeModal({ open, onOpenChange, project, employees, onS
         return;
       }
 
-      changes.employees = {
-        added: cleanedAdded,
-        removed: cleanedRemoved,
-      };
       selectedSections.push("employees");
     }
 
-    const requestType: ChangeRequest["type"] =
-      selectedSections.length > 1 ? "general" : (selectedSections[0] ?? "general");
+    const getRequestTypeStr = () => {
+      const first = selectedSections[0];
+      if (first === "timeline") return "Timeline";
+      if (first === "roles") return "Roles";
+      if (first === "employees") return "Team";
+      return "Timeline";
+    };
 
     const changeRequest: ChangeRequest = {
-      id: `REQ${Date.now()}`,
-      title,
-      description,
-      type: requestType,
-      status: "pending",
-      createdAt: new Date().toISOString().slice(0, 10),
-      changes,
+      Id: `REQ${Date.now()}`,
+      ChangeTitle: title,
+      ChangeDescription: description,
+      RequestType: getRequestTypeStr(),
+      Status: "pending",
+      CreatedAt: new Date().toISOString().slice(0, 10),
+      ...(includeTimeline ? {
+        NewStartDate: newStartDate,
+        NewEndDate: newEndDate,
+        NewDurationWeeks: newDuration
+      } : {}),
+      RoleChangesJson: includeRoles ? JSON.stringify(roleChanges) : undefined,
+      MemberChangesJson: includeEmployees ? JSON.stringify(employeeChanges) : undefined
     };
 
     onSubmit(changeRequest);
@@ -255,12 +251,16 @@ export function RequestChangeModal({ open, onOpenChange, project, employees, onS
     if (type === "added") {
       setRoleChanges({
         ...roleChanges,
-        added: [...roleChanges.added, { role: "", seniority: "junior", allocationType: "dedicated", count: 1 }],
+        added: [...roleChanges.added, { role: "", seniority: "Intern", allocationType: "dedicated", count: 1 }],
       });
     } else {
+      if (!project.RoleCompositions || project.RoleCompositions.length === 0) {
+        toast.error("No roles Available in this project to remove");
+        return;
+      }
       setRoleChanges({
         ...roleChanges,
-        removed: [...roleChanges.removed, { role: "", seniority: "junior", allocationType: "dedicated", count: 1 }],
+        removed: [...roleChanges.removed, { role: "", seniority: "Intern", allocationType: "dedicated", count: 1 }],
       });
     }
   };
@@ -269,18 +269,22 @@ export function RequestChangeModal({ open, onOpenChange, project, employees, onS
     if (type === "added") {
       setEmployeeChanges({
         ...employeeChanges,
-        added: [...employeeChanges.added, { employeeId: "", role: "", seniority: "junior" }],
+        added: [...employeeChanges.added, { employeeId: "", role: "", seniority: "Intern" }],
       });
     } else {
+      if (!project.Members || project.Members.length === 0) {
+        toast.error("No team members available in this project to remove");
+        return;
+      }
       setEmployeeChanges({
         ...employeeChanges,
-        removed: [...employeeChanges.removed, { employeeId: "", role: "", seniority: "junior" }],
+        removed: [...employeeChanges.removed, { employeeId: "", role: "", seniority: "Intern" }],
       });
     }
   };
 
   const availableEmployees = employees.filter(e => 
-    !project.assignedMembers?.some(m => m.employeeId === e.id)
+    !project.Members?.some(m => m.Id === e.Id)
   );
 
   return (
@@ -289,7 +293,7 @@ export function RequestChangeModal({ open, onOpenChange, project, employees, onS
         <DialogHeader>
           <DialogTitle>Request Project Change</DialogTitle>
           <DialogDescription>
-            Submit a change request for {project.name}. The GM will review and approve or reject your request.
+            Submit a change request for {project.Name}. The GM will review and approve or reject your request.
           </DialogDescription>
         </DialogHeader>
 
@@ -369,7 +373,7 @@ export function RequestChangeModal({ open, onOpenChange, project, employees, onS
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Current Duration</Label>
-                  <Input value={`${project.duration} weeks`} disabled />
+                  <Input value={`${project.DurationWeeks} weeks`} disabled />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="newDuration">New Duration (weeks)</Label>
@@ -445,9 +449,9 @@ export function RequestChangeModal({ open, onOpenChange, project, employees, onS
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="junior">Junior</SelectItem>
-                        <SelectItem value="senior">Senior</SelectItem>
-                        <SelectItem value="intern">Intern</SelectItem>
+                        <SelectItem value="Junior">Junior</SelectItem>
+                        <SelectItem value="Senior">Senior</SelectItem>
+                        <SelectItem value="Intern">Intern</SelectItem>
                       </SelectContent>
                     </Select>
                     <Select
@@ -524,10 +528,9 @@ export function RequestChangeModal({ open, onOpenChange, project, employees, onS
                         const row = updated[index];
                         if (!row) return;
                         row.role = value;
-                        const existing = project.teamComposition.find(t => t.role === value);
+                        const existing = project.RoleCompositions?.find(t => t.RoleTitle === value);
                         if (existing) {
-                          row.seniority = existing.seniority;
-                          row.allocationType = existing.allocationType;
+                          row.seniority = existing.SeniorityLevel as Seniority;
                         }
                         setRoleChanges({ ...roleChanges, removed: updated });
                       }}
@@ -536,9 +539,9 @@ export function RequestChangeModal({ open, onOpenChange, project, employees, onS
                         <SelectValue placeholder="Select role to remove" />
                       </SelectTrigger>
                       <SelectContent>
-                        {project.teamComposition.map((tc) => (
-                          <SelectItem key={`${tc.role}-${tc.seniority}`} value={tc.role}>
-                            {tc.role} ({tc.seniority}) - {tc.allocationType} - {tc.count}
+                        {project.RoleCompositions?.map((tc) => (
+                          <SelectItem key={`${tc.RoleTitle}-${tc.SeniorityLevel}`} value={tc.RoleTitle}>
+                            {tc.RoleTitle} ({tc.SeniorityLevel}) - {tc.Quantity}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -598,12 +601,12 @@ export function RequestChangeModal({ open, onOpenChange, project, employees, onS
                       value={emp.employeeId}
                       onValueChange={(value) => {
                         const updated = [...employeeChanges.added];
-                        const employee = employees.find(e => e.id === value);
+                        const employee = employees.find(e => e.Id === value);
                         if (employee) {
                           updated[index] = {
                             employeeId: value,
-                            role: employee.role,
-                            seniority: employee.seniority,
+                            role: employee.JobTitle,
+                            seniority: employee.SeniorityLevel as Seniority,
                           };
                           setEmployeeChanges({ ...employeeChanges, added: updated });
                         }
@@ -614,8 +617,8 @@ export function RequestChangeModal({ open, onOpenChange, project, employees, onS
                       </SelectTrigger>
                       <SelectContent>
                         {availableEmployees.map((e) => (
-                          <SelectItem key={e.id} value={e.id}>
-                            {e.name} - {e.role} ({e.seniority})
+                          <SelectItem key={e.Id} value={e.Id}>
+                            {e.FullName} - {e.JobTitle} ({e.SeniorityLevel})
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -660,12 +663,12 @@ export function RequestChangeModal({ open, onOpenChange, project, employees, onS
                       value={emp.employeeId}
                       onValueChange={(value) => {
                         const updated = [...employeeChanges.removed];
-                        const member = project.assignedMembers?.find(m => m.employeeId === value);
+                        const member = project.Members?.find(m => m.Id === value);
                         if (member) {
                           updated[index] = {
                             employeeId: value,
-                            role: member.role,
-                            seniority: member.seniority,
+                            role: member.JobTitle,
+                            seniority: member.SeniorityLevel as Seniority,
                           };
                           setEmployeeChanges({ ...employeeChanges, removed: updated });
                         }
@@ -675,11 +678,11 @@ export function RequestChangeModal({ open, onOpenChange, project, employees, onS
                         <SelectValue placeholder="Select team member to remove" />
                       </SelectTrigger>
                       <SelectContent>
-                        {project.assignedMembers?.map((member) => {
-                          const employee = employees.find(e => e.id === member.employeeId);
+                        {project.Members?.map((member) => {
+                          const employee = employees.find(e => e.Id === member.Id);
                           return (
-                            <SelectItem key={member.id} value={member.employeeId}>
-                              {employee?.name || "Unknown"} - {member.role}
+                            <SelectItem key={member.Id} value={member.Id}>
+                              {employee?.FullName || "Unknown"} - {member.JobTitle}
                             </SelectItem>
                           );
                         })}

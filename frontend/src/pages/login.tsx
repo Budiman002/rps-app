@@ -100,10 +100,10 @@ export function Login() {
           </div>
           
           <div className="grid gap-2 text-xs text-gray-600 bg-gray-50 p-3 rounded-md">
-            <div><strong>Marketing:</strong> marketing@rps.com / password</div>
-            <div><strong>GM:</strong> gm@rps.com / password</div>
-            <div><strong>PM:</strong> pm@rps.com / password</div>
-            <div><strong>HR:</strong> hr@rps.com / password</div>
+            <div><strong>Marketing:</strong> marketing@rps.com / Admin123!</div>
+            <div><strong>GM:</strong> gm@rps.com / Admin123!</div>
+            <div><strong>PM:</strong> pm@rps.com / Admin123!</div>
+            <div><strong>HR:</strong> hr@rps.com / Admin123!</div>
           </div>
         </div>
 

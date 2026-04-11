@@ -12,6 +12,16 @@ import { toast } from "sonner";
 import { ArrowLeft, Plus, Trash2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 
+interface ProjectFormData {
+  name: string;
+  clientName: string;
+  description: string;
+  expectedStartDate: string;
+  duration: string;
+  priority: Priority;
+  notes: string;
+}
+
 interface TeamRole {
   id: string;
   role: string;
@@ -25,18 +35,26 @@ export function AddProject() {
   const { addProject } = useData();
   const navigate = useNavigate();
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    name: string;
+    clientName: string;
+    description: string;
+    expectedStartDate: string;
+    duration: string;
+    priority: Priority;
+    notes: string;
+  }>({
     name: "",
     clientName: "",
     description: "",
     expectedStartDate: "",
     duration: "",
-    priority: "medium" as Priority,
+    priority: "Medium" as Priority,
     notes: "",
   });
 
   const [teamRoles, setTeamRoles] = useState<TeamRole[]>([
-    { id: "1", role: "Project Manager", seniority: "senior", allocationType: "dedicated", count: 1 },
+    { id: "1", role: "Project Manager", seniority: "Senior", allocationType: "dedicated", count: 1 },
   ]);
 
   const [loading, setLoading] = useState(false);
@@ -46,14 +64,11 @@ export function AddProject() {
     const start = new Date(startDate);
     const end = new Date(start);
     end.setDate(end.getDate() + weeks * 7);
-    return end.toISOString().split("T")[0];
+    return end.toISOString().split("T")[0]!;
   };
 
-  const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => {
-      const updated = { ...prev, [field]: value };
-      return updated;
-    });
+  const handleInputChange = (field: keyof ProjectFormData, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
   };
 
   const addTeamRole = () => {
@@ -62,7 +77,7 @@ export function AddProject() {
       {
         id: Date.now().toString(),
         role: "",
-        seniority: "junior",
+        seniority: "Junior",
         allocationType: "dedicated",
         count: 1
       },
@@ -98,18 +113,23 @@ export function AddProject() {
     setLoading(true);
     try {
       const durationWeeks = parseInt(formData.duration);
-      const estimatedEndDate = calculateEndDate(formData.expectedStartDate, durationWeeks);
+      const estimatedEndDate = calculateEndDate(formData.expectedStartDate, durationWeeks) || "";
 
-      addProject({
-        name: formData.name,
-        clientName: formData.clientName,
-        description: formData.description,
-        expectedStartDate: formData.expectedStartDate,
-        duration: durationWeeks,
-        estimatedEndDate,
-        priority: formData.priority,
-        notes: formData.notes,
-        teamComposition: teamRoles.map(({ id, ...rest }) => rest),
+      await addProject({
+        Name: formData.name,
+        ClientName: formData.clientName,
+        Description: formData.description,
+        ExpectedStartDate: formData.expectedStartDate,
+        DurationWeeks: durationWeeks,
+        EstimatedEndDate: estimatedEndDate,
+        Priority: formData.priority,
+        NotesFromMarketing: formData.notes,
+        RoleCompositions: teamRoles.map(r => ({
+           RoleTitle: r.role,
+           SeniorityLevel: r.seniority,
+           Quantity: r.count,
+           EmploymentStatus: r.allocationType
+        }))
       });
 
       toast.success("Project created successfully", {
@@ -123,7 +143,7 @@ export function AddProject() {
     }
   };
 
-  if (user?.role !== "marketing") {
+  if (user?.role !== "Marketing" && user?.role !== "GM") {
     return (
       <div className="text-center py-12">
         <p className="text-gray-500">You don't have permission to add projects</p>
@@ -260,10 +280,10 @@ export function AddProject() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="low">Low</SelectItem>
-                    <SelectItem value="medium">Medium</SelectItem>
-                    <SelectItem value="high">High</SelectItem>
-                    <SelectItem value="critical">Critical</SelectItem>
+                    <SelectItem value="Low">Low</SelectItem>
+                    <SelectItem value="Medium">Medium</SelectItem>
+                    <SelectItem value="High">High</SelectItem>
+                    <SelectItem value="Critical">Critical</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -320,9 +340,9 @@ export function AddProject() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="intern">Intern</SelectItem>
-                          <SelectItem value="junior">Junior</SelectItem>
-                          <SelectItem value="senior">Senior</SelectItem>
+                          <SelectItem value="Intern">Intern</SelectItem>
+                          <SelectItem value="Junior">Junior</SelectItem>
+                          <SelectItem value="Senior">Senior</SelectItem>
                         </SelectContent>
                       </Select>
 
