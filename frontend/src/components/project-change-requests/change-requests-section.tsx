@@ -207,11 +207,11 @@ export function ChangeRequestsSection({
                   <div className="grid grid-cols-2 gap-3 text-sm">
                     <div>
                       <p className="text-gray-500">New Start Date:</p>
-                      <p className="font-medium">{formatDateOnly(request.NewStartDate)}</p>
+                      <p className="font-medium">{formatDate(request.NewStartDate)}</p>
                     </div>
                     <div>
                       <p className="text-gray-500">New End Date:</p>
-                      <p className="font-medium">{formatDateOnly(request.NewEndDate || "")}</p>
+                      <p className="font-medium">{formatDate(request.NewEndDate || "")}</p>
                     </div>
                     {request.NewDurationWeeks && (
                       <div>
