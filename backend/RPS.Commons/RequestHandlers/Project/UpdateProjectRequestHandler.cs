@@ -138,6 +138,7 @@ public class UpdateProjectRequestHandler : IRequestHandler<UpdateProjectRequest,
 
         var existingMembers = project.Members.ToList();
         var incomingMemberKeys = request.Members
+            .Where(m => m.RoleCompositionId != Guid.Empty && m.EmployeeId != Guid.Empty)
             .Select(m => (m.EmployeeId, m.RoleCompositionId))
             .ToHashSet();
 

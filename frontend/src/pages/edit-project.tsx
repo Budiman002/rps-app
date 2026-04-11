@@ -50,25 +50,53 @@ export function EditProject() {
       setDuration(String(project.DurationWeeks || 0));
       setEndDate(project.EndDate || project.EstimatedEndDate || "");
       
-      const mappedRoles = (project.RoleCompositions || []).map((rc: any) => ({
-        id: rc.id || rc.Id || crypto.randomUUID(),
-        roleTitle: rc.roleTitle || rc.RoleTitle || "",
-        seniorityLevel: rc.seniorityLevel || rc.SeniorityLevel || "",
-        employmentStatus: rc.employmentStatus || rc.EmploymentStatus || "Dedicated",
-        quantity: rc.quantity || rc.Quantity || 0
-      }));
+      const ZERO_GUID = "00000000-0000-0000-0000-000000000000";
+
+      const mappedRoles = (project.RoleCompositions || []).map((rc: any) => {
+        const rcId = rc.id || rc.Id;
+        return {
+          id: (rcId && rcId !== ZERO_GUID) ? rcId : crypto.randomUUID(),
+          roleTitle: rc.roleTitle || rc.RoleTitle || "",
+          seniorityLevel: rc.seniorityLevel || rc.SeniorityLevel || "",
+          employmentStatus: rc.employmentStatus || rc.EmploymentStatus || "Dedicated",
+          quantity: rc.quantity || rc.Quantity || 0
+        };
+      });
       setRoles(mappedRoles);
       
-      const mappedMembers = (project.Members || []).map((m: any) => ({
-        ...m,
-        EmployeeId: m.id || m.Id, // Link to employee ID
-        RoleCompositionId: m.roleCompositionId || m.RoleCompositionId,
-        JobTitle: m.jobTitle || m.JobTitle,
-        RoleTitle: m.roleTitle || m.RoleTitle
-      }));
+      const mappedMembers = (project.Members || []).map((m: any) => {
+        const mRoleCompId = m.roleCompositionId || m.RoleCompositionId;
+        const empId = m.id || m.Id;
+        
+        // Find employee data to re-verify matching during load
+        const emp = employees.find(e => (e as any).id === empId || (e as any).Id === empId);
+        let finalRoleCompId = (mRoleCompId && mRoleCompId !== ZERO_GUID) ? mRoleCompId : "";
+
+        if (emp && !finalRoleCompId) {
+            const empJobTitle = (emp as any).JobTitle || (emp as any).jobTitle || "";
+            const empSeniority = (emp as any).SeniorityLevel || (emp as any).seniorityLevel || "";
+            
+            const matchingRole = mappedRoles.find(r => 
+                r.roleTitle.toLowerCase().trim() === empJobTitle.toLowerCase().trim() && 
+                r.seniorityLevel.toLowerCase().trim() === empSeniority.toLowerCase().trim()
+            ) || mappedRoles.find(r => r.roleTitle.toLowerCase().trim() === empJobTitle.toLowerCase().trim());
+            
+            if (matchingRole) {
+                finalRoleCompId = matchingRole.id;
+            }
+        }
+
+        return {
+          ...m,
+          EmployeeId: empId,
+          RoleCompositionId: finalRoleCompId,
+          JobTitle: m.jobTitle || m.JobTitle,
+          RoleTitle: m.roleTitle || m.RoleTitle
+        };
+      });
       setTeamMembers(mappedMembers);
     }
-  }, [project]);
+  }, [project, employees]);
 
   const isStartDateEditable = useMemo(() => {
     return project?.Status !== "InProgress";
@@ -200,6 +228,8 @@ export function EditProject() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    const ZERO_GUID = "00000000-0000-0000-0000-000000000000";
+
     // "Only allow all field filled or nothing. Not half filled."
     const invalidRoles = roles.filter(r => !r.roleTitle || r.quantity < 1);
     if (invalidRoles.length > 0) {
@@ -207,9 +237,13 @@ export function EditProject() {
       return;
     }
 
-    const invalidMembers = teamMembers.filter(m => !m.EmployeeId || !m.RoleCompositionId);
+    const invalidMembers = teamMembers.filter(m => 
+        !m.EmployeeId || 
+        !m.RoleCompositionId || 
+        m.RoleCompositionId === ZERO_GUID
+    );
     if (invalidMembers.length > 0) {
-      toast.error("Please complete all team member fields (including Role) or remove the incomplete member");
+      toast.error("Please complete all team member assignments. Each member must match a budget role.");
       return;
     }
 
@@ -492,22 +526,36 @@ export function EditProject() {
                               <Select
                                 value={member.EmployeeId}
                                 onValueChange={(value) => {
-                                  const emp = employees.find(e => e.Id === value);
+                                  const emp = employees.find(e => (e as any).Id === value || (e as any).id === value);
                                   if (emp) {
-                                    // Automatic background matching for Role Composition
-                                    const matchingRole = roles.find(r => 
-                                      r.roleTitle === emp.JobTitle && 
-                                      r.seniorityLevel === emp.SeniorityLevel
-                                    ) || roles.find(r => r.roleTitle === emp.JobTitle);
+                                    const empJobTitle = (emp as any).JobTitle || (emp as any).jobTitle || "";
+                                    const empSeniority = (emp as any).SeniorityLevel || (emp as any).seniorityLevel || "";
+                                    const empFullName = (emp as any).FullName || (emp as any).fullName || "";
+                                    const empEmail = (emp as any).Email || (emp as any).email || "";
+
+                                    // Automatic background matching for Role Composition (case-insensitive)
+                                    let matchingRole = roles.find(r => 
+                                      r.roleTitle.toLowerCase().trim() === empJobTitle.toLowerCase().trim() && 
+                                      r.seniorityLevel.toLowerCase().trim() === empSeniority.toLowerCase().trim()
+                                    );
+
+                                    // Fallback to Job Title only if exact seniority match not found
+                                    if (!matchingRole) {
+                                        matchingRole = roles.find(r => r.roleTitle.toLowerCase().trim() === empJobTitle.toLowerCase().trim());
+                                    }
+
+                                    if (!matchingRole && value) {
+                                        toast.error(`The job title "${empJobTitle}" does not match any role in the budget. Please add this role in the "Role Composition" tab first.`);
+                                    }
 
                                     handleTeamMemberChange(index, {
                                       EmployeeId: value,
-                                      FullName: emp.FullName,
-                                      Email: emp.Email,
-                                      JobTitle: emp.JobTitle,
-                                      SeniorityLevel: emp.SeniorityLevel,
+                                      FullName: empFullName,
+                                      Email: empEmail,
+                                      JobTitle: empJobTitle,
+                                      SeniorityLevel: empSeniority,
                                       RoleCompositionId: matchingRole?.id || "",
-                                      RoleTitle: matchingRole?.roleTitle || emp.JobTitle
+                                      RoleTitle: matchingRole?.roleTitle || ""
                                     });
                                   }
                                 }}
@@ -516,9 +564,9 @@ export function EditProject() {
                                   <SelectValue placeholder="Select employee..." />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  {employees.map((emp) => (
-                                    <SelectItem key={emp.Id} value={emp.Id}>
-                                      {emp.FullName} - {emp.JobTitle} ({emp.SeniorityLevel})
+                                  {employees.map((emp: any) => (
+                                    <SelectItem key={emp.id || emp.Id} value={emp.id || emp.Id}>
+                                      {emp.fullName || emp.FullName} - {emp.jobTitle || emp.JobTitle} ({emp.seniorityLevel || emp.SeniorityLevel})
                                     </SelectItem>
                                   ))}
                                 </SelectContent>
