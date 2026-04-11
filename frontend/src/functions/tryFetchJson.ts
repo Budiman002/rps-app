@@ -18,7 +18,8 @@ export async function tryFetchJson<T>(
       };
     }
 
-    const data = (await response.json()) as T;
+    const text = await response.text();
+    const data = text ? (JSON.parse(text) as T) : ({} as T);
     return { data };
   } catch (error) {
     return {

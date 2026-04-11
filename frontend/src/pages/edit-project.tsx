@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate, useLocation } from "react-router";
 import { useAuth } from "@/contexts/auth-context";
-import { useData, Project, ProjectMember, Seniority } from "@/contexts/data-context";
+import { useData, Project, ProjectMember, Seniority, UpdateProjectRequest } from "@/contexts/data-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,8 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { ArrowLeft, Plus, Trash2 } from "lucide-react";
-import { useRpsApi } from "@/functions/api/rpsApi";
+import { ArrowLeft, Plus, Trash2, Info } from "lucide-react";
 
 export function EditProject() {
   const { id } = useParams();
@@ -19,13 +18,12 @@ export function EditProject() {
   const { projects, employees, updateProject } = useData();
   const navigate = useNavigate();
   const location = useLocation();
-  const rpsApi = useRpsApi();
 
   const project = projects.find(p => p.Id === id);
 
   // Type helper for local selection state
   type RoleCompositionLocal = { 
-    id: string; // local id for keying
+    id: string; // GUID or temp
     roleTitle: string; 
     seniorityLevel: Seniority; 
     employmentStatus: "dedicated" | "parallel"; 
@@ -35,6 +33,7 @@ export function EditProject() {
   // Timeline state
   const [startDate, setStartDate] = useState("");
   const [duration, setDuration] = useState("");
+  const [endDate, setEndDate] = useState("");
 
   // Role composition state
   const [roles, setRoles] = useState<RoleCompositionLocal[]>([]);
@@ -48,9 +47,10 @@ export function EditProject() {
     if (project) {
       setStartDate(project.ActualStartDate || project.ExpectedStartDate || "");
       setDuration(String(project.DurationWeeks || 0));
+      setEndDate(project.EndDate || project.EstimatedEndDate || "");
       
       const mappedRoles = (project.RoleCompositions || []).map(rc => ({
-        id: rc.Id || `RC${Math.random()}`,
+        id: rc.Id || crypto.randomUUID(),
         roleTitle: rc.RoleTitle,
         seniorityLevel: rc.SeniorityLevel,
         employmentStatus: rc.EmploymentStatus,
@@ -60,6 +60,10 @@ export function EditProject() {
       
       setTeamMembers([...(project.Members || [])]);
     }
+  }, [project]);
+
+  const isStartDateEditable = useMemo(() => {
+    return project?.Status !== "InProgress";
   }, [project]);
 
   if (!project) {
@@ -81,18 +85,51 @@ export function EditProject() {
     );
   }
 
-  const calculateEndDate = (start: string, weeks: number) => {
-    if (!start || !weeks) return "";
+  // Helper functions for date calculations
+  const calculateEndDate = (start: string, weeks: number): string => {
+    if (!start || !weeks || isNaN(weeks)) return "";
     const startD = new Date(start);
     const end = new Date(startD);
     end.setDate(end.getDate() + weeks * 7);
-    return end.toISOString().split("T")[0];
+    return end.toISOString().split("T")[0] || "";
+  };
+
+  const calculateDuration = (start: string, end: string) => {
+    if (!start || !end) return 0;
+    const s = new Date(start);
+    const e = new Date(end);
+    const diffTime = e.getTime() - s.getTime();
+    if (diffTime < 0) return 0;
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24 * 7));
+  };
+
+  // Timeline Handlers
+  const handleStartDateChange = (val: string) => {
+    setStartDate(val);
+    if (duration) {
+      setEndDate(calculateEndDate(val, parseInt(duration)));
+    }
+  };
+
+  const handleDurationChange = (val: string) => {
+    setDuration(val);
+    const weeks = parseInt(val);
+    if (startDate && !isNaN(weeks)) {
+      setEndDate(calculateEndDate(startDate, weeks));
+    }
+  };
+
+  const handleEndDateChange = (val: string) => {
+    setEndDate(val);
+    if (startDate) {
+      setDuration(String(calculateDuration(startDate, val)));
+    }
   };
 
   // Role composition handlers
   const handleAddRole = () => {
     setRoles([...roles, { 
-      id: `RC${Date.now()}`, 
+      id: crypto.randomUUID(), 
       roleTitle: "", 
       seniorityLevel: "Junior", 
       employmentStatus: "dedicated", 
@@ -101,7 +138,12 @@ export function EditProject() {
   };
 
   const handleRemoveRole = (index: number) => {
+    const roleToRemove = roles[index];
     setRoles(roles.filter((_, i) => i !== index));
+    // Also remove team members associated with this role
+    if (roleToRemove) {
+        setTeamMembers(teamMembers.filter(m => m.RoleCompositionId !== roleToRemove.id));
+    }
   };
 
   const handleRoleChange = <K extends keyof RoleCompositionLocal>(
@@ -121,7 +163,7 @@ export function EditProject() {
     setTeamMembers([
       ...teamMembers,
       { 
-        Id: `TM${Date.now()}`, 
+        Id: crypto.randomUUID(), 
         EmployeeId: "", 
         FullName: "", 
         Email: "", 
@@ -152,48 +194,43 @@ export function EditProject() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!startDate || !duration) {
-      toast.error("Please fill in timeline fields");
-      return;
-    }
-
-    // Validate roles
+    // "Only allow all field filled or nothing. Not half filled."
     const invalidRoles = roles.filter(r => !r.roleTitle || r.quantity < 1);
     if (invalidRoles.length > 0) {
-      toast.error("Please complete all role fields");
+      toast.error("Please complete all role fields or remove the incomplete role");
       return;
     }
 
-    // Validate team members
-    const invalidMembers = teamMembers.filter(m => !m.EmployeeId || !m.RoleTitle);
+    const invalidMembers = teamMembers.filter(m => !m.EmployeeId || !m.RoleCompositionId);
     if (invalidMembers.length > 0) {
-      toast.error("Please complete all team member fields");
+      toast.error("Please complete all team member fields (including Role) or remove the incomplete member");
       return;
     }
 
     setLoading(true);
     try {
-      const durationWeeks = parseInt(duration);
-      const endDate = calculateEndDate(startDate, durationWeeks);
-
-      const payload = {
-        ActualStartDate: startDate,
-        DurationWeeks: durationWeeks,
-        EndDate: endDate,
-        RoleCompositions: roles.map(r => ({
+      const payload: UpdateProjectRequest = {
+        NewStartDate: startDate || undefined,
+        NewDurationWeeks: duration ? parseInt(duration) : undefined,
+        NewEndDate: endDate || undefined,
+        Roles: roles.map(r => ({
+          Id: r.id,
           RoleTitle: r.roleTitle,
           SeniorityLevel: r.seniorityLevel,
           EmploymentStatus: r.employmentStatus,
           Quantity: r.quantity
         })),
-        Members: teamMembers,
+        Members: teamMembers.map(m => ({
+          EmployeeId: m.EmployeeId,
+          RoleCompositionId: m.RoleCompositionId
+        })),
       };
 
       await updateProject(project.Id, payload);
       toast.success("Project updated successfully");
       navigate(`/app/projects/${project.Id}`, { state: { from: location.state?.from } });
     } catch (error) {
-      toast.error("An unexpected error occurred");
+      toast.error(error instanceof Error ? error.message : "An unexpected error occurred");
     } finally {
       setLoading(false);
     }
@@ -210,8 +247,6 @@ export function EditProject() {
     "DevOps Engineer",
   ];
 
-  const seniorities: Seniority[] = ["Intern", "Junior", "Senior"];
-
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       <div>
@@ -223,8 +258,8 @@ export function EditProject() {
           <ArrowLeft className="h-4 w-4" />
           Back to Project
         </Button>
-        <h1 className="text-3xl font-bold">Edit Project</h1>
-        <p className="text-gray-500 mt-1">Update project timeline, roles, and team members</p>
+        <h1 className="text-3xl font-bold">Edit Project Plan</h1>
+        <p className="text-gray-500 mt-1">Review and synchronize project timeline, roles, and assignments</p>
       </div>
 
       <form onSubmit={handleSubmit}>
@@ -244,60 +279,63 @@ export function EditProject() {
               </TabsList>
 
               {/* Timeline Tab */}
-              <TabsContent value="timeline" className="space-y-4 mt-4">
+              <TabsContent value="timeline" className="space-y-4 mt-4 text-left">
+                {!isStartDateEditable && (
+                  <div className="flex items-start gap-3 p-3 bg-amber-50 border border-amber-200 rounded text-amber-800 text-sm">
+                    <Info className="h-4 w-4 shrink-0 mt-0.5" />
+                    <div>
+                      Project is In Progress. Start Date is read-only. Adjust Duration or End Date to update the timeline.
+                    </div>
+                  </div>
+                )}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="startDate">Start Date *</Label>
+                    <Label htmlFor="startDate">Start Date</Label>
                     <Input
                       id="startDate"
                       type="date"
                       value={startDate}
-                      onChange={(e) => setStartDate(e.target.value)}
-                      required
+                      onChange={(e) => handleStartDateChange(e.target.value)}
+                      disabled={!isStartDateEditable}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="duration">Duration (weeks) *</Label>
+                    <Label htmlFor="duration">Duration (weeks)</Label>
                     <Input
                       id="duration"
                       type="number"
                       min="1"
                       value={duration}
-                      onChange={(e) => setDuration(e.target.value)}
-                      required
+                      onChange={(e) => handleDurationChange(e.target.value)}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>End Date</Label>
+                    <Label htmlFor="endDate">End Date</Label>
                     <Input
-                      type="text"
-                      value={
-                        startDate && duration
-                          ? calculateEndDate(startDate, parseInt(duration))
-                          : ""
-                      }
-                      disabled
-                      placeholder="Auto-calculated"
+                      id="endDate"
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => handleEndDateChange(e.target.value)}
                     />
                   </div>
                 </div>
 
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <h3 className="font-semibold text-blue-900 mb-2">Current Timeline</h3>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
+                  <h3 className="font-semibold text-blue-900 mb-2">Original Baseline</h3>
                   <div className="text-sm text-blue-800 space-y-1">
-                    <div>Start: {project.ActualStartDate || project.ExpectedStartDate}</div>
-                    <div>End: {project.EndDate || project.EstimatedEndDate}</div>
-                    <div>Duration: {project.DurationWeeks} weeks</div>
+                    <div>Expected Start: {project.ExpectedStartDate ? new Date(project.ExpectedStartDate).toLocaleDateString() : "N/A"}</div>
+                    <div>Estimated End: {project.EstimatedEndDate ? new Date(project.EstimatedEndDate).toLocaleDateString() : "N/A"}</div>
                   </div>
                 </div>
               </TabsContent>
 
               {/* Role Composition Tab */}
-              <TabsContent value="roles" className="space-y-4 mt-4">
+              <TabsContent value="roles" className="space-y-4 mt-4 text-left">
                 <div className="flex items-center justify-between">
-                  <p className="text-sm text-gray-500">
-                    Define the required roles and their quantities for this project
-                  </p>
+                  <div>
+                    <h3 className="font-semibold">Resource Budget</h3>
+                    <p className="text-sm text-gray-500">Define the skills and quantities required</p>
+                  </div>
                   <Button
                     type="button"
                     variant="outline"
@@ -312,44 +350,34 @@ export function EditProject() {
 
                 {roles.length === 0 ? (
                   <div className="text-center py-8 border border-dashed rounded-lg">
-                    <p className="text-gray-500 mb-3">No roles added yet</p>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={handleAddRole}
-                      className="gap-2"
-                    >
-                      <Plus className="h-4 w-4" />
-                      Add First Role
-                    </Button>
+                    <p className="text-gray-500">No roles defined in the budget</p>
                   </div>
                 ) : (
                   <div className="space-y-3">
                     {roles.map((role, index) => (
                       <div key={role.id} className="p-4 border rounded-lg space-y-3">
                         <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium text-gray-500">
-                            Role #{index + 1}
+                          <span className="text-sm font-medium text-gray-500 uppercase tracking-wider">
+                            Budget Entry #{index + 1}
                           </span>
                           <Button
                             type="button"
                             variant="ghost"
                             size="sm"
                             onClick={() => handleRemoveRole(index)}
-                            className="gap-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
                           >
                             <Trash2 className="h-4 w-4" />
-                            Remove
                           </Button>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                           <div className="space-y-2">
-                            <Label htmlFor={`role-${index}`}>Role *</Label>
+                            <Label>Role Title</Label>
                             <Select
                               value={role.roleTitle}
                               onValueChange={(value) => handleRoleChange(index, "roleTitle", value)}
                             >
-                              <SelectTrigger id={`role-${index}`}>
+                              <SelectTrigger>
                                 <SelectValue placeholder="Select role..." />
                               </SelectTrigger>
                               <SelectContent>
@@ -362,12 +390,12 @@ export function EditProject() {
                             </Select>
                           </div>
                           <div className="space-y-2">
-                            <Label htmlFor={`seniority-${index}`}>Seniority *</Label>
+                            <Label>Seniority</Label>
                             <Select
                               value={role.seniorityLevel}
                               onValueChange={(value) => handleRoleChange(index, "seniorityLevel", value as Seniority)}
                             >
-                              <SelectTrigger id={`seniority-${index}`}>
+                              <SelectTrigger>
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
@@ -378,24 +406,23 @@ export function EditProject() {
                             </Select>
                           </div>
                           <div className="space-y-2">
-                            <Label htmlFor={`allocationType-${index}`}>Allocation *</Label>
+                            <Label>Allocation</Label>
                             <Select
                               value={role.employmentStatus}
                               onValueChange={(value) => handleRoleChange(index, "employmentStatus", value as "dedicated" | "parallel")}
                             >
-                              <SelectTrigger id={`allocationType-${index}`}>
+                              <SelectTrigger>
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="dedicated">Dedicated</SelectItem>
+                                <SelectItem value="dedicated">Dedicated (100%)</SelectItem>
                                 <SelectItem value="parallel">Parallel</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
                           <div className="space-y-2">
-                            <Label htmlFor={`count-${index}`}>Count *</Label>
+                            <Label>Headcount</Label>
                             <Input
-                              id={`count-${index}`}
                               type="number"
                               min="1"
                               value={role.quantity}
@@ -410,11 +437,12 @@ export function EditProject() {
               </TabsContent>
 
               {/* Team Members Tab */}
-              <TabsContent value="members" className="space-y-4 mt-4">
+              <TabsContent value="members" className="space-y-4 mt-4 text-left">
                 <div className="flex items-center justify-between">
-                  <p className="text-sm text-gray-500">
-                    Assign specific employees to this project
-                  </p>
+                  <div>
+                    <h3 className="font-semibold">Personnel Assignment</h3>
+                    <p className="text-sm text-gray-500">Assign employees to the roles defined in the budget</p>
+                  </div>
                   <Button
                     type="button"
                     variant="outline"
@@ -423,47 +451,36 @@ export function EditProject() {
                     className="gap-2"
                   >
                     <Plus className="h-4 w-4" />
-                    Add Member
+                    Assign Member
                   </Button>
                 </div>
 
                 {teamMembers.length === 0 ? (
                   <div className="text-center py-8 border border-dashed rounded-lg">
-                    <p className="text-gray-500 mb-3">No team members assigned yet</p>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={handleAddTeamMember}
-                      className="gap-2"
-                    >
-                      <Plus className="h-4 w-4" />
-                      Add First Member
-                    </Button>
+                    <p className="text-gray-500">No personnel assigned yet</p>
                   </div>
                 ) : (
                   <div className="space-y-3">
                     {teamMembers.map((member, index) => {
-                      const employee = employees.find(e => e.Id === member.EmployeeId);
                       return (
                         <div key={member.Id} className="p-4 border rounded-lg space-y-3">
                           <div className="flex items-center justify-between">
                             <span className="text-sm font-medium text-gray-500">
-                              Member #{index + 1}
+                              Assignment #{index + 1}
                             </span>
                             <Button
                               type="button"
                               variant="ghost"
                               size="sm"
                               onClick={() => handleRemoveTeamMember(index)}
-                              className="gap-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
                             >
                               <Trash2 className="h-4 w-4" />
-                              Remove
                             </Button>
                           </div>
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                             <div className="space-y-2">
-                              <Label htmlFor={`employee-${index}`}>Employee *</Label>
+                              <Label>Practitioner</Label>
                               <Select
                                 value={member.EmployeeId}
                                 onValueChange={(value) => {
@@ -473,43 +490,47 @@ export function EditProject() {
                                     handleTeamMemberChange(index, "FullName", emp.FullName);
                                     handleTeamMemberChange(index, "Email", emp.Email);
                                     handleTeamMemberChange(index, "JobTitle", emp.JobTitle);
-                                    handleTeamMemberChange(index, "RoleTitle", emp.JobTitle);
                                     handleTeamMemberChange(index, "SeniorityLevel", emp.SeniorityLevel);
                                   }
                                 }}
                               >
-                                <SelectTrigger id={`employee-${index}`}>
+                                <SelectTrigger>
                                   <SelectValue placeholder="Select employee..." />
                                 </SelectTrigger>
                                 <SelectContent>
                                   {employees.map((emp) => (
                                     <SelectItem key={emp.Id} value={emp.Id}>
-                                      {emp.FullName} - {emp.JobTitle} ({emp.SeniorityLevel})
+                                      {emp.FullName} - {emp.JobTitle}
                                     </SelectItem>
                                   ))}
                                 </SelectContent>
                               </Select>
                             </div>
                             <div className="space-y-2">
-                              <Label>Role</Label>
-                              <Input
-                                value={member.RoleTitle}
-                                disabled
-                                placeholder="Auto-filled"
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <Label>Seniority</Label>
-                              <Badge variant="outline" className="mt-2 capitalize">
-                                {member.SeniorityLevel}
-                              </Badge>
+                              <Label>Filling Role (from Budget)</Label>
+                              <Select
+                                value={member.RoleCompositionId}
+                                onValueChange={(value) => {
+                                  const role = roles.find(r => r.id === value);
+                                  if (role) {
+                                    handleTeamMemberChange(index, "RoleCompositionId", value);
+                                    handleTeamMemberChange(index, "RoleTitle", role.roleTitle);
+                                  }
+                                }}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select role from budget..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {roles.map((role) => (
+                                    <SelectItem key={role.id} value={role.id}>
+                                      {role.roleTitle} ({role.seniorityLevel})
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
                             </div>
                           </div>
-                          {employee && (
-                            <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
-                              {employee.Email}
-                            </div>
-                          )}
                         </div>
                       );
                     })}
@@ -529,7 +550,7 @@ export function EditProject() {
             Cancel
           </Button>
           <Button type="submit" disabled={loading}>
-            {loading ? "Saving..." : "Save All Changes"}
+            {loading ? "Synchronizing..." : "Save All Changes"}
           </Button>
         </div>
       </form>

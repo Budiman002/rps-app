@@ -2,6 +2,7 @@ import { createContext, useContext, useState, ReactNode, useEffect } from "react
 import { AppSettings } from "@/functions/AppSettings";
 import { BackendApiUrl } from "@/functions/BackendApiUrl";
 import { useAuth } from "@/contexts/auth-context";
+import { useRpsApi } from "@/functions/api/rpsApi";
 import type {
   ChangeRequest,
   ContractExtensionRequest,
@@ -11,6 +12,7 @@ import type {
   Priority,
   Seniority,
   ProjectMember,
+  UpdateProjectRequest,
 } from "@/types/domain";
 
 export type {
@@ -22,6 +24,7 @@ export type {
   Priority,
   Seniority,
   ProjectMember,
+  UpdateProjectRequest,
 } from "@/types/domain";
 
 interface DataContextType {
@@ -30,7 +33,7 @@ interface DataContextType {
   isLoading: boolean;
   refreshData: () => Promise<void>;
   addProject: (project: Omit<Project, "Id" | "UpdatedAt" | "Status" | "CreatedAt" | "Members">) => Promise<void>;
-  updateProject: (id: string, updates: Partial<Project>) => Promise<void>;
+  updateProject: (id: string, updates: UpdateProjectRequest) => Promise<void>;
   assignMembers: (projectId: string, members: ProjectMember[], pmId: string) => Promise<void>;
   updateEmployee: (id: string, updates: Partial<Employee>) => Promise<void>;
   addRequestChange: (projectId: string, title: string, description: string) => Promise<void>;
@@ -108,12 +111,13 @@ export function DataProvider({ children }: { children: ReactNode }) {
     await refreshData();
   };
 
-  const updateProject = async (id: string, updates: Partial<Project>) => {
-    const url = `${BackendApiUrl.updateProject}/${id}`;
-    await fetchWithAuth(url, {
-      method: "PUT",
-      body: JSON.stringify(updates),
-    });
+  const api = useRpsApi();
+
+  const updateProject = async (id: string, updates: UpdateProjectRequest) => {
+    const { error } = await api.updateProject(id, updates);
+    if (error) {
+      throw new Error(error);
+    }
     await refreshData();
   };
 

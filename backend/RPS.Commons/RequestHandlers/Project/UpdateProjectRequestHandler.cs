@@ -63,6 +63,9 @@ public class UpdateProjectRequestHandler : IRequestHandler<UpdateProjectRequest,
             project.EstimatedEndDate = project.ExpectedStartDate.AddDays(project.DurationWeeks * 7);
         }
 
+        if (!string.IsNullOrEmpty(request.NewStatus))
+            project.Status = Enum.Parse<ProjectStatus>(request.NewStatus);
+
         project.UpdatedAt = DateTime.UtcNow;
 
         // ---- 2. ROLES SYNC ----------------------------------------------

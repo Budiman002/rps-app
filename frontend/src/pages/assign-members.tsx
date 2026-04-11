@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useParams, useNavigate, useLocation } from "react-router";
 import { useAuth } from "@/contexts/auth-context";
-import { useData, ProjectMember, Seniority } from "@/contexts/data-context";
+import { useData, ProjectMember, Seniority, UpdateProjectRequest } from "@/contexts/data-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -130,24 +130,28 @@ export function AssignMembers() {
   const handleUpdateStartDate = async () => {
     if (!project || !resourceAvailability.recommendedStartDate) return;
 
-    const newStartDate = resourceAvailability.recommendedStartDate;
-    const startDate = new Date(newStartDate);
-    const durationWeeks = project.DurationWeeks || 0;
-    const endDate = new Date(startDate);
-    endDate.setDate(endDate.getDate() + durationWeeks * 7);
-    const newEndDate = endDate.toISOString().split("T")[0];
+    const newDateStr = resourceAvailability.recommendedStartDate;
+    const projectStartDate = new Date(newDateStr);
+    const duration = project.DurationWeeks || 0;
+    const projectEndDate = new Date(projectStartDate);
+    projectEndDate.setDate(projectEndDate.getDate() + duration * 7);
+    const newEndDateStr = projectEndDate.toISOString().split("T")[0];
 
     try {
-      await updateProject(project.Id, {
-        ExpectedStartDate: newStartDate,
-        EstimatedEndDate: newEndDate,
-      });
+      const payload: UpdateProjectRequest = {
+        NewStartDate: newDateStr,
+        NewEndDate: newEndDateStr,
+        Roles: [], // Empty means no changes to roles
+        Members: [] // Empty means no changes to members
+      };
+
+      await updateProject(project.Id, payload);
 
       toast.success("Project dates updated", {
-        description: `Start date changed to ${new Date(newStartDate).toLocaleDateString()}`,
+        description: `Start date changed to ${new Date(newDateStr).toLocaleDateString()}`,
       });
       
-      setActualStartDate(newStartDate);
+      setActualStartDate(newDateStr);
     } catch (error) {
       toast.error("Failed to update project dates");
     }
@@ -177,7 +181,16 @@ export function AssignMembers() {
 
     setLoading(true);
     try {
-      const projectMembers: ProjectMember[] = roleRequirements.map((req) => {
+      // 1. Prepare members for mapping
+      const memberItems = roleRequirements.map((req) => ({
+        EmployeeId: assignments[req.key]!,
+        RoleCompositionId: req.roleCompositionId || ""
+      }));
+
+      // 2. Prepare full member objects for the separate assignMembers call if still needed
+      // Actually, fe-standard suggests standardizing on the PUT endpoint.
+      // But let's check legacy behavior.
+      const legacyProjectMembers: ProjectMember[] = roleRequirements.map((req) => {
         const emp = employees.find(e => e.Id === assignments[req.key])!;
         return {
           Id: `TM${Date.now()}-${Math.random()}`,
@@ -197,14 +210,19 @@ export function AssignMembers() {
       const today = new Date().toISOString().split("T")[0]!;
       const statusText = actualStartDate > today ? "Scheduled" : "InProgress";
 
-      // Update project with actual dates first
-      await updateProject(project.Id, {
-        ActualStartDate: actualStartDate,
-        Status: statusText as any // Casting to any or ProjectStatus to avoid literal mismatch
-      });
+      // 3. Update project with everything — following the new standard!
+      const updatePayload: UpdateProjectRequest = {
+        NewStartDate: actualStartDate,
+        NewStatus: statusText as any,
+        Roles: [], // No changes to role definitions
+        Members: memberItems
+      };
 
-      // Then assign project members
-      await assignMembers(project.Id, projectMembers, pmId || "");
+      await updateProject(project.Id, updatePayload);
+      
+      // 4. Optionally call assignMembers if specific logic resides there (pm registration etc.)
+      // Given the backend syncs everything in PUT, this might be redundant, but we preserve it for safety.
+      await assignMembers(project.Id, legacyProjectMembers, pmId || "");
 
       toast.success("Team members assigned successfully", {
         description: `Project status updated to ${statusText}`,

@@ -97,3 +97,24 @@ export interface Employee {
   UpdatedAt: string;
   ExtensionRequest?: ContractExtensionRequest;
 }
+export interface UpdateRoleCompositionItem {
+  Id?: string;
+  RoleTitle: string;
+  SeniorityLevel: Seniority;
+  EmploymentStatus: "dedicated" | "parallel";
+  Quantity: number;
+}
+
+export interface UpdateProjectMemberItem {
+  EmployeeId: string;
+  RoleCompositionId: string;
+}
+
+export interface UpdateProjectRequest {
+  NewStartDate?: string;
+  NewEndDate?: string;
+  NewDurationWeeks?: number;
+  NewStatus?: ProjectStatus;
+  Roles: UpdateRoleCompositionItem[];
+  Members: UpdateProjectMemberItem[];
+}
