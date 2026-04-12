@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { tryFetchJson, type FetchResult } from "./tryFetchJson";
 
 type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: any };
@@ -46,11 +46,11 @@ export function useFetchWithAccessToken() {
     [withAuthHeader],
   );
 
-  return {
+  return useMemo(() => ({
     fetchGET,
     fetchPOST,
     fetchPUT,
     fetchDELETE,
-  };
+  }), [fetchGET, fetchPOST, fetchPUT, fetchDELETE]);
 }
 

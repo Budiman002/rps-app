@@ -30,7 +30,7 @@ public class GetProjectDetailRequestHandler : IRequestHandler<GetProjectDetailRe
         return MapProjectResponse(project);
     }
 
-    internal static ProjectResponse MapProjectResponse(RPS.Entities.Project project)
+    private ProjectResponse MapProjectResponse(RPS.Entities.Project project)
     {
         return new ProjectResponse
         {
@@ -45,7 +45,7 @@ public class GetProjectDetailRequestHandler : IRequestHandler<GetProjectDetailRe
             EstimatedEndDate = project.EstimatedEndDate,
             ActualStartDate = project.ActualStartDate,
             DurationWeeks = project.DurationWeeks,
-            AssignedPmId = project.AssignedPmId,
+            AssignedPmId = _context.Employees.FirstOrDefault(e => e.UserId == project.AssignedPmId)?.Id,
             CreatedAt = project.CreatedAt,
             UpdatedAt = project.UpdatedAt,
             RoleCompositions = project.RoleCompositions.Select(rc => new RoleCompositionResponse

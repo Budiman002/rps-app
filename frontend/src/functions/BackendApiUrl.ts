@@ -12,6 +12,9 @@ export const BackendApiUrl = {
   updateProject: `${baseUrl}/Project`,
   getEmployees: `${baseUrl}/Employee`,
   createChangeRequest: `${baseUrl}/projects/change-requests`,
+  createContractExtendRequest: `${baseUrl}/ContractExtendRequest`,
+  getNotifications: `${baseUrl}/Notification`,
+  markNotificationAsRead: `${baseUrl}/Notification`,
 };
 
 export function GetProjectById(id: string): string {
@@ -20,4 +23,8 @@ export function GetProjectById(id: string): string {
 
 export function UpdateProjectById(id: string): string {
   return `${BackendApiUrl.updateProject}/${encodeURIComponent(id)}`;
+}
+
+export function MarkNotificationAsRead(id: string): string {
+  return `${BackendApiUrl.markNotificationAsRead}/${encodeURIComponent(id)}/read`;
 }

@@ -92,7 +92,7 @@ export interface Employee {
   ContractType: "Permanent" | "Contract";
   ContractEndDate?: string;
   IsUnavailable: boolean;
-  CurrentProject?: string;
+  CurrentProjects?: string[];
   CreatedAt: string;
   UpdatedAt: string;
   ExtensionRequest?: ContractExtensionRequest;
@@ -115,6 +115,25 @@ export interface UpdateProjectRequest {
   NewEndDate?: string;
   NewDurationWeeks?: number;
   NewStatus?: ProjectStatus;
+  AssignedPmId?: string;
   Roles: UpdateRoleCompositionItem[];
   Members: UpdateProjectMemberItem[];
+}
+
+export interface CreateExtendContractRequest {
+  EmployeeId: string;
+  RequestedBy?: string;
+  RequestedEndDate: string;
+  Reason: string;
+}
+
+export interface Notification {
+  Id: string;
+  Type: string;
+  Title: string;
+  Message: string;
+  ReferenceId?: string;
+  ReferenceType?: string;
+  IsRead: boolean;
+  CreatedAt: string;
 }

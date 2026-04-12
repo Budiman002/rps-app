@@ -73,18 +73,36 @@ export function EmployeeManagement() {
     setNewContractEndDate("");
   };
 
-  const handleRequestExtension = () => {
+  const handleRequestExtension = async () => {
     if (!selectedEmployee || !newContractEndDate || !extensionReason) {
       toast.error("Please fill in all fields");
       return;
     }
 
-    requestContractExtension(selectedEmployee, newContractEndDate, extensionReason, user?.name || "");
-    toast.success("Contract extension requested");
-    setDialogOpen(false);
-    setSelectedEmployee(null);
-    setNewContractEndDate("");
-    setExtensionReason("");
+    try {
+      const employee = employees.find(e => e.Id === selectedEmployee);
+      if (employee?.ContractEndDate) {
+        const currentEndDate = new Date(employee.ContractEndDate);
+        currentEndDate.setHours(0, 0, 0, 0);
+
+        const newEndDate = new Date(newContractEndDate);
+        newEndDate.setHours(0, 0, 0, 0);
+        
+        if (newEndDate <= currentEndDate) {
+          toast.error("New end date should be in the future");
+          return;
+        }
+      }
+
+      await requestContractExtension(selectedEmployee, newContractEndDate, extensionReason);
+      toast.success("Contract extension requested");
+      setDialogOpen(false);
+      setSelectedEmployee(null);
+      setNewContractEndDate("");
+      setExtensionReason("");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to request contract extension");
+    }
   };
 
   const handleRejectExtension = (employeeId: string) => {
@@ -249,7 +267,17 @@ export function EmployeeManagement() {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <span className="text-sm text-gray-400">None</span>
+                        <div className="flex flex-wrap gap-1 max-w-[200px]">
+                          {employee.CurrentProjects && employee.CurrentProjects.length > 0 ? (
+                            employee.CurrentProjects.map((p, idx) => (
+                              <Badge key={idx} variant="secondary" className="text-[10px] bg-blue-50 text-blue-600 border-blue-100 font-normal">
+                                {p}
+                              </Badge>
+                            ))
+                          ) : (
+                            <span className="text-sm text-gray-400">None</span>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">

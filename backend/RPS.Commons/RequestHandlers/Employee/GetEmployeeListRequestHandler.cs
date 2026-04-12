@@ -18,6 +18,10 @@ public class GetEmployeeListRequestHandler : IRequestHandler<GetEmployeeListRequ
     public async Task<List<EmployeeResponse>> Handle(GetEmployeeListRequest request, CancellationToken cancellationToken)
     {
         var unavailableEmployeeIds = await _context.ProjectMembers
+            .Include(pm => pm.RoleComposition)
+            .Include(pm => pm.Project)
+            .Where(pm => pm.RoleComposition.EmploymentStatus == EmploymentStatus.Dedicated &&
+                        (pm.Project.Status == ProjectStatus.Scheduled || pm.Project.Status == ProjectStatus.InProgress))
             .Select(pm => pm.EmployeeId)
             .Distinct()
             .ToListAsync(cancellationToken);
@@ -36,7 +40,27 @@ public class GetEmployeeListRequestHandler : IRequestHandler<GetEmployeeListRequ
                 YearsOfExperience = x.YearsOfExperience,
                 IsUnavailable = unavailableEmployeeIds.Contains(x.Id),
                 CreatedAt = x.CreatedAt,
-                UpdatedAt = x.UpdatedAt
+                UpdatedAt = x.UpdatedAt,
+                CurrentProjects = _context.ProjectMembers
+                    .Include(pm => pm.Project)
+                    .Where(pm => pm.EmployeeId == x.Id && 
+                                (pm.Project.Status == ProjectStatus.Scheduled || pm.Project.Status == ProjectStatus.InProgress))
+                    .Select(pm => pm.Project.Name)
+                    .ToList(),
+                ExtensionRequest = _context.ContractExtendRequests
+                    .Where(er => er.EmployeeId == x.Id && er.Status == RequestStatus.Pending)
+                    .OrderByDescending(er => er.CreatedAt)
+                    .Select(er => new ContractExtensionRequestResponse
+                    {
+                        Id = er.Id,
+                        EmployeeId = er.EmployeeId,
+                        RequestedBy = er.RequestedBy,
+                        RequestedDate = er.CreatedAt,
+                        ProposedEndDate = er.RequestedEndDate,
+                        Reason = er.Reason,
+                        Status = er.Status.ToString()
+                    })
+                    .FirstOrDefault()
             })
             .ToListAsync(cancellationToken);
 

@@ -1,15 +1,15 @@
 import { useState, useMemo, useEffect } from "react";
 import { formatDate } from "@/functions/dateFormatter";
-import { useParams, useNavigate, useLocation } from "react-router";
+import { useParams, useNavigate, useLocation, Link } from "react-router";
 import { useAuth } from "@/contexts/auth-context";
-import { useData, ProjectMember, Seniority, UpdateProjectRequest } from "@/contexts/data-context";
+import { useData, Seniority, UpdateProjectRequest } from "@/contexts/data-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { ArrowLeft, AlertTriangle, Calendar, Sparkles } from "lucide-react";
+import { ArrowLeft, AlertTriangle, Calendar, Sparkles, ExternalLink } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
@@ -40,20 +40,36 @@ export function AssignMembers() {
     );
   }, [project]);
 
-  // Filter available employees for each role based on start date
+  // Filter available employees for each role based on start date and contract
   const getAvailableEmployees = (roleTitle: string, seniorityLevel: string, startDate?: string) => {
-    return employees.filter((emp) => {
-      if (emp.JobTitle !== roleTitle || emp.SeniorityLevel !== seniorityLevel) return false;
+    const projectStartDate = startDate ? new Date(startDate) : new Date();
+    const duration = project?.DurationWeeks || 0;
+    const projectEndDate = new Date(projectStartDate);
+    projectEndDate.setDate(projectEndDate.getDate() + duration * 7);
 
-      // Simple availability check: if they have a contract that ends before start date
-      if (startDate && emp.ContractType === "Contract" && emp.ContractEndDate) {
-          const endDate = new Date(emp.ContractEndDate);
-          const start = new Date(startDate);
-          if (endDate < start) return true;
-      }
-      
-      return !emp.IsUnavailable;
-    });
+    return employees
+      .filter((emp) => {
+        if (emp.JobTitle !== roleTitle || emp.SeniorityLevel !== seniorityLevel) return false;
+        if (emp.IsUnavailable) return false;
+        
+        // Availability: If contract, check if it ends after the project estimated end date
+        if (emp.ContractType === "Contract" && emp.ContractEndDate) {
+          const contractEnd = new Date(emp.ContractEndDate);
+          if (contractEnd < projectEndDate) return false;
+        }
+        
+        return true;
+      })
+      .sort((a, b) => {
+        const aProjects = a.CurrentProjects?.length || 0;
+        const bProjects = b.CurrentProjects?.length || 0;
+        
+        // Formula: (100 - (Projects * 10)) + (Exp * 5)
+        const aScore = (100 - (aProjects * 10)) + (a.YearsOfExperience * 5);
+        const bScore = (100 - (bProjects * 10)) + (b.YearsOfExperience * 5);
+        
+        return bScore - aScore;
+      });
   };
 
   // Check resource availability and calculate recommended start date
@@ -100,16 +116,19 @@ export function AssignMembers() {
     if (project && !actualStartDate) {
       setActualStartDate(project.ActualStartDate || project.ExpectedStartDate || "");
     }
-  }, [project]);
+  }, [project, actualStartDate]);
 
-  // AI Auto-assignment
-  useEffect(() => {
-    if (!project || !actualStartDate || Object.keys(assignments).length > 0) return;
+  // AI Auto-assignment (Step 15: Magic Fill)
+  const handleAutoAssign = () => {
+    if (!project || !actualStartDate) return;
 
-    const newAssignments: Record<string, string> = {};
-    const assignedEmployeeIds = new Set<string>();
+    const newAssignments: Record<string, string> = { ...assignments };
+    const assignedEmployeeIds = new Set(Object.values(newAssignments));
 
     roleRequirements.forEach((req) => {
+      // Only assign if currently blank (Step 11: blank cells)
+      if (newAssignments[req.key]) return;
+
       const availableEmployees = getAvailableEmployees(req.roleTitle, req.seniorityLevel, actualStartDate)
         .filter(emp => !assignedEmployeeIds.has(emp.Id));
 
@@ -122,40 +141,18 @@ export function AssignMembers() {
       }
     });
 
-    if (Object.keys(newAssignments).length > 0) {
-      setAssignments(newAssignments);
-      setAiAssignedKeys(new Set(Object.keys(newAssignments)));
-    }
-  }, [project, roleRequirements, employees, actualStartDate]);
+    setAssignments(newAssignments);
+    setAiAssignedKeys(new Set(Object.keys(newAssignments)));
+    toast.info("Auto-filled missing assignments based on availability and experience");
+  };
 
-  const handleUpdateStartDate = async () => {
-    if (!project || !resourceAvailability.recommendedStartDate) return;
-
-    const newDateStr = resourceAvailability.recommendedStartDate;
-    const projectStartDate = new Date(newDateStr);
-    const duration = project.DurationWeeks || 0;
-    const projectEndDate = new Date(projectStartDate);
-    projectEndDate.setDate(projectEndDate.getDate() + duration * 7);
-    const newEndDateStr = projectEndDate.toISOString().split("T")[0];
-
-    try {
-      const payload: UpdateProjectRequest = {
-        NewStartDate: newDateStr,
-        NewEndDate: newEndDateStr,
-        Roles: [], // Empty means no changes to roles
-        Members: [] // Empty means no changes to members
-      };
-
-      await updateProject(project.Id, payload);
-
-      toast.success("Project dates updated", {
-        description: `Start date changed to ${formatDate(newDateStr)}`,
-      });
-      
-      setActualStartDate(newDateStr);
-    } catch (error) {
-      toast.error("Failed to update project dates");
-    }
+  const handleUpdateStartDate = () => {
+    if (!resourceAvailability.recommendedStartDate) return;
+    
+    // Step 14: Only update local state, following "plan then save" flow
+    setActualStartDate(resourceAvailability.recommendedStartDate);
+    setIsStartDateAiRecommended(true);
+    toast.info(`Updated planned start date to recommend date: ${formatDate(resourceAvailability.recommendedStartDate)}`);
   };
 
   const handleAssign = (key: string, employeeId: string) => {
@@ -174,59 +171,62 @@ export function AssignMembers() {
       return;
     }
 
+    const ZERO_GUID = "00000000-0000-0000-0000-000000000000";
+
     const unassignedRoles = roleRequirements.filter((req) => !assignments[req.key]);
     if (unassignedRoles.length > 0) {
       toast.error("Please assign all required roles");
       return;
     }
+    
+    // Step: Standardize validation logic similar to EditProject
+    const invalidMembers = Object.values(assignments).filter(id => !id || id === ZERO_GUID);
+    if (invalidMembers.length > 0) {
+      toast.error("Please complete all team member assignments.");
+      return;
+    }
 
     setLoading(true);
     try {
-      // 1. Prepare members for mapping
+      // 1. Calculate dates
+      const startDate = new Date(actualStartDate);
+      const endDate = new Date(startDate);
+      endDate.setDate(endDate.getDate() + (project.DurationWeeks || 0) * 7);
+      const endDateStr = endDate.toISOString().split("T")[0];
+
+      // 2. Prepare members
       const memberItems = roleRequirements.map((req) => ({
         EmployeeId: assignments[req.key]!,
-        RoleCompositionId: req.roleCompositionId || ""
-      }));
-
-      // 2. Prepare full member objects for the separate assignMembers call if still needed
-      // Actually, fe-standard suggests standardizing on the PUT endpoint.
-      // But let's check legacy behavior.
-      const legacyProjectMembers: ProjectMember[] = roleRequirements.map((req) => {
-        const emp = employees.find(e => e.Id === assignments[req.key])!;
-        return {
-          Id: `TM${Date.now()}-${Math.random()}`,
-          EmployeeId: emp.Id,
-          FullName: emp.FullName,
-          Email: emp.Email,
-          JobTitle: emp.JobTitle,
-          SeniorityLevel: emp.SeniorityLevel as Seniority,
-          RoleCompositionId: req.roleCompositionId || "",
-          RoleTitle: req.roleTitle,
-        };
-      });
+        RoleCompositionId: req.roleCompositionId && req.roleCompositionId !== ZERO_GUID ? req.roleCompositionId : ZERO_GUID
+      })).filter(m => m.EmployeeId !== ZERO_GUID && m.RoleCompositionId !== ZERO_GUID);
 
       const pmAssignment = roleRequirements.find((req) => req.roleTitle === "Project Manager");
-      const pmId = pmAssignment ? assignments[pmAssignment.key] : "";
+      const pmId = pmAssignment && assignments[pmAssignment.key] ? assignments[pmAssignment.key] : undefined;
 
       const today = new Date().toISOString().split("T")[0]!;
       const statusText = actualStartDate > today ? "Scheduled" : "InProgress";
 
-      // 3. Update project with everything — following the new standard!
+      // 3. Update project in ONE call (Step 20 & 21)
       const updatePayload: UpdateProjectRequest = {
-        NewStartDate: actualStartDate,
+        NewStartDate: actualStartDate || undefined,
+        NewEndDate: endDateStr || undefined,
         NewStatus: statusText as any,
-        Roles: [], // No changes to role definitions
+        AssignedPmId: (pmId && pmId !== ZERO_GUID) ? pmId : undefined,
+        // CRITICAL: Must include existing roles, otherwise the backend "sync" logic will delete them!
+        Roles: (project.RoleCompositions || []).map(rc => ({
+          Id: rc.Id,
+          RoleTitle: rc.RoleTitle,
+          SeniorityLevel: rc.SeniorityLevel,
+          EmploymentStatus: rc.EmploymentStatus,
+          Quantity: rc.Quantity
+        })), 
         Members: memberItems
       };
 
       await updateProject(project.Id, updatePayload);
-      
-      // 4. Optionally call assignMembers if specific logic resides there (pm registration etc.)
-      // Given the backend syncs everything in PUT, this might be redundant, but we preserve it for safety.
-      await assignMembers(project.Id, legacyProjectMembers, pmId || "");
 
       toast.success("Team members assigned successfully", {
-        description: `Project status updated to ${statusText}`,
+        description: `Project status updated to ${statusText}. PM has been notified.`,
       });
       navigate(`/app/projects/${project.Id}`, { state: { from: location.state?.from } });
     } catch (error) {
@@ -306,17 +306,26 @@ export function AssignMembers() {
               </div>
             </div>
 
-            <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg p-4">
+            <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg p-4 flex items-center justify-between">
               <div className="flex items-start gap-3">
                 <Sparkles className="h-5 w-5 text-purple-600 mt-0.5" />
                 <div className="flex-1">
                   <h4 className="font-semibold text-purple-900 mb-1">AI-Powered Smart Assignment</h4>
                   <p className="text-sm text-purple-800">
-                    Our AI suggested assignments based on resource availability and experience.
-                    You can manually edit any assignment or the start date as needed.
+                    Get recommendations based on resource availability and experience level.
                   </p>
                 </div>
               </div>
+              <Button 
+                type="button"
+                variant="outline" 
+                size="sm"
+                onClick={handleAutoAssign}
+                className="bg-white border-purple-200 text-purple-700 hover:bg-purple-50 hover:text-purple-800 gap-2"
+              >
+                <Sparkles className="h-4 w-4" />
+                Magic Fill
+              </Button>
             </div>
 
             {/* Resource Availability Warning */}
@@ -374,6 +383,14 @@ export function AssignMembers() {
               {roleRequirements.map((req, index) => {
                 const availableEmployees = getAvailableEmployees(req.roleTitle, req.seniorityLevel, actualStartDate);
                 const selectedEmployeeId = assignments[req.key];
+                const selectedEmployee = employees.find(e => e.Id === selectedEmployeeId);
+                
+                // Step 18: Contract Check
+                const projectEndDate = new Date(actualStartDate || new Date());
+                projectEndDate.setDate(projectEndDate.getDate() + (project.DurationWeeks || 0) * 7);
+                const isContractInsufficient = selectedEmployee?.ContractType === "Contract" && 
+                                                selectedEmployee.ContractEndDate && 
+                                                new Date(selectedEmployee.ContractEndDate) < projectEndDate;
 
                 return (
                   <div key={req.key} className="p-4 border rounded-lg space-y-3">
@@ -385,7 +402,7 @@ export function AssignMembers() {
                         </Badge>
                       </div>
                       <div className="text-sm text-gray-500">
-                        #{index + 1} of {roleRequirements.length}
+                        Slot #{index + 1}
                       </div>
                     </div>
 
@@ -400,7 +417,7 @@ export function AssignMembers() {
                         )}
                       </div>
                       <Select
-                        value={selectedEmployeeId}
+                        value={selectedEmployeeId || ""}
                         onValueChange={(value) => handleAssign(req.key, value)}
                       >
                         <SelectTrigger id={`assign-${req.key}`}>
@@ -412,15 +429,48 @@ export function AssignMembers() {
                               No available employees for this role
                             </div>
                           ) : (
-                            availableEmployees.map((emp) => (
-                              <SelectItem key={emp.Id} value={emp.Id}>
-                                {emp.FullName} - {emp.Email}
-                              </SelectItem>
-                            ))
+                            availableEmployees.map((emp) => {
+                              const projects = emp.CurrentProjects?.length || 0;
+                              const score = (100 - (projects * 10)) + (emp.YearsOfExperience * 5);
+                              return (
+                                <SelectItem key={emp.Id} value={emp.Id}>
+                                  <div className="flex items-center justify-between w-full gap-8">
+                                    <span>{emp.FullName} ({emp.YearsOfExperience}y Exp)</span>
+                                    <div className="flex items-center gap-2 text-[10px]">
+                                      <Badge variant="outline" className="h-4 px-1 text-gray-400 font-normal">
+                                        {projects} Projs
+                                      </Badge>
+                                      <Badge variant="outline" className="h-4 px-1 text-blue-500 border-blue-200 bg-blue-50 font-semibold">
+                                        Score: {score}
+                                      </Badge>
+                                    </div>
+                                  </div>
+                                </SelectItem>
+                              );
+                            })
                           )}
                         </SelectContent>
                       </Select>
-                      {availableEmployees.length === 0 && (
+                      
+                      {/* Step 18 & 19: Contract Warning and Redirect */}
+                      {isContractInsufficient && (
+                        <Alert variant="destructive" className="py-2 px-3 mt-2 text-xs">
+                          <AlertTriangle className="h-3 w-3" />
+                          <div className="flex flex-col gap-1">
+                            <AlertDescription>
+                              Kontrak tidak cukup (Ends: {formatDate(selectedEmployee.ContractEndDate)})
+                            </AlertDescription>
+                            <Link 
+                              to={`/app/employees`} 
+                              className="flex items-center gap-1 font-semibold underline hover:text-red-800"
+                            >
+                              Manage via User Management <ExternalLink className="h-3 w-3" />
+                            </Link>
+                          </div>
+                        </Alert>
+                      )}
+
+                      {availableEmployees.length === 0 && !selectedEmployeeId && (
                         <p className="text-xs text-red-500">
                           No {req.seniorityLevel} {req.roleTitle} available. Consider reassigning resources.
                         </p>

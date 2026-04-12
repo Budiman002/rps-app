@@ -5,7 +5,6 @@ import {
   LayoutDashboard, 
   FolderKanban, 
   Users, 
-  Bell, 
   LogOut,
   Menu,
   X
@@ -20,13 +19,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { NotificationPopover } from "@/components/shared/notification-popover";
 
 export function RootLayout() {
   const { isAuthenticated, user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const unreadNotificationCount = 0;
+  const [unreadCount, setUnreadCount] = useState(0);
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
@@ -57,7 +57,7 @@ export function RootLayout() {
       return [
         { icon: LayoutDashboard, label: "Project Dashboard", path: "/app/dashboard" },
         { icon: FolderKanban, label: "Projects", path: "/app/projects" },
-        { icon: Users, label: "User Management", path: "/app/employees" },
+        { icon: Users, label: "Employee Management", path: "/app/employees" },
       ];
     }
 
@@ -102,12 +102,7 @@ export function RootLayout() {
           </div>
 
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" className="relative">
-              <Bell className="h-5 w-5" />
-              {unreadNotificationCount > 0 && (
-                <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full"></span>
-              )}
-            </Button>
+            <NotificationPopover onUnreadCountChange={setUnreadCount} />
 
             <DropdownMenu modal={false}>
               <DropdownMenuTrigger asChild>
