@@ -115,6 +115,7 @@ export interface UpdateProjectRequest {
   NewEndDate?: string;
   NewDurationWeeks?: number;
   NewStatus?: ProjectStatus;
+  AssignedPmId?: string;
   Roles: UpdateRoleCompositionItem[];
   Members: UpdateProjectMemberItem[];
 }

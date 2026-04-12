@@ -23,6 +23,8 @@ public class Employee
 
     public DateTime? ContractEndDate { get; set; }
     public int YearsOfExperience { get; set; }
+    public Guid? UserId { get; set; }
+    public virtual User? User { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 }

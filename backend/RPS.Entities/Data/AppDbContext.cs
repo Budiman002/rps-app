@@ -33,6 +33,11 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<Employee>(entity =>
         {
             entity.Property(e => e.Id).HasDefaultValueSql("gen_random_uuid()");
+
+            entity.HasOne(x => x.User)
+                .WithOne()
+                .HasForeignKey<Employee>(x => x.UserId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
 
         modelBuilder.Entity<Project>(entity =>

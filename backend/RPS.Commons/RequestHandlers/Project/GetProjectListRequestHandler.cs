@@ -33,10 +33,10 @@ public class GetProjectListRequestHandler : IRequestHandler<GetProjectListReques
             .OrderByDescending(x => x.CreatedAt)
             .ToListAsync(cancellationToken);
 
-        return projects.Select(MapProjectResponse).ToList();
+        return projects.Select(p => MapProjectResponse(p)).ToList();
     }
 
-    private static ProjectResponse MapProjectResponse(RPS.Entities.Project project)
+    private ProjectResponse MapProjectResponse(RPS.Entities.Project project)
     {
         return new ProjectResponse
         {
@@ -51,6 +51,7 @@ public class GetProjectListRequestHandler : IRequestHandler<GetProjectListReques
             EstimatedEndDate = project.EstimatedEndDate,
             ActualStartDate = project.ActualStartDate,
             DurationWeeks = project.DurationWeeks,
+            AssignedPmId = _context.Employees.FirstOrDefault(e => e.UserId == project.AssignedPmId)?.Id,
             CreatedAt = project.CreatedAt,
             UpdatedAt = project.UpdatedAt,
             RoleCompositions = project.RoleCompositions.Select(rc => new RoleCompositionResponse

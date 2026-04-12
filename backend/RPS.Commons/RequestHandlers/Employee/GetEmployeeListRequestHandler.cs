@@ -18,6 +18,10 @@ public class GetEmployeeListRequestHandler : IRequestHandler<GetEmployeeListRequ
     public async Task<List<EmployeeResponse>> Handle(GetEmployeeListRequest request, CancellationToken cancellationToken)
     {
         var unavailableEmployeeIds = await _context.ProjectMembers
+            .Include(pm => pm.RoleComposition)
+            .Include(pm => pm.Project)
+            .Where(pm => pm.RoleComposition.EmploymentStatus == EmploymentStatus.Dedicated &&
+                        (pm.Project.Status == ProjectStatus.Scheduled || pm.Project.Status == ProjectStatus.InProgress))
             .Select(pm => pm.EmployeeId)
             .Distinct()
             .ToListAsync(cancellationToken);

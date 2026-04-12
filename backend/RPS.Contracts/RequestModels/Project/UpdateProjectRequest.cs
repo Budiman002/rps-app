@@ -16,6 +16,7 @@ public class UpdateProjectRequest : IRequest<Unit>
     public int? NewDurationWeeks { get; set; }
 
     public string? NewStatus { get; set; }
-    public List<RoleCompositionItem> Roles { get; set; } = new();
-    public List<ProjectMemberItem> Members { get; set; } = new();
+    public Guid? AssignedPmId { get; set; }
+    public List<RoleCompositionItem>? Roles { get; set; }
+    public List<ProjectMemberItem>? Members { get; set; }
 }
