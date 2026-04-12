@@ -13,4 +13,5 @@ public class EmployeeResponse
     public bool IsUnavailable { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
+    public ContractExtensionRequestResponse? ExtensionRequest { get; set; }
 }

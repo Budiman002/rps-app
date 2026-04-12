@@ -36,7 +36,21 @@ public class GetEmployeeListRequestHandler : IRequestHandler<GetEmployeeListRequ
                 YearsOfExperience = x.YearsOfExperience,
                 IsUnavailable = unavailableEmployeeIds.Contains(x.Id),
                 CreatedAt = x.CreatedAt,
-                UpdatedAt = x.UpdatedAt
+                UpdatedAt = x.UpdatedAt,
+                ExtensionRequest = _context.ContractExtendRequests
+                    .Where(er => er.EmployeeId == x.Id && er.Status == RequestStatus.Pending)
+                    .OrderByDescending(er => er.CreatedAt)
+                    .Select(er => new ContractExtensionRequestResponse
+                    {
+                        Id = er.Id,
+                        EmployeeId = er.EmployeeId,
+                        RequestedBy = er.RequestedBy,
+                        RequestedDate = er.CreatedAt,
+                        ProposedEndDate = er.RequestedEndDate,
+                        Reason = er.Reason,
+                        Status = er.Status.ToString()
+                    })
+                    .FirstOrDefault()
             })
             .ToListAsync(cancellationToken);
 

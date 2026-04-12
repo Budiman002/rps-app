@@ -121,6 +121,18 @@ export interface UpdateProjectRequest {
 
 export interface CreateExtendContractRequest {
   EmployeeId: string;
+  RequestedBy?: string;
   RequestedEndDate: string;
   Reason: string;
+}
+
+export interface Notification {
+  Id: string;
+  Type: string;
+  Title: string;
+  Message: string;
+  ReferenceId?: string;
+  ReferenceType?: string;
+  IsRead: boolean;
+  CreatedAt: string;
 }

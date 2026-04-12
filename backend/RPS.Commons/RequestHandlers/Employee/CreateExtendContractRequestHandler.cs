@@ -62,7 +62,7 @@ public class CreateExtendContractRequestHandler : IRequestHandler<CreateExtendCo
 
         foreach (var hr in hrUsers)
         {
-            var notification = new Notification
+            var notification = new RPS.Entities.Notification
             {
                 Id = Guid.NewGuid(),
                 RecipientId = hr.Id,
