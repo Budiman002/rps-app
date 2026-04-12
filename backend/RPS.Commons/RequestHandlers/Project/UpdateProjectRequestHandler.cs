@@ -169,6 +169,29 @@ public class UpdateProjectRequestHandler : IRequestHandler<UpdateProjectRequest,
             });
         }
 
+        // ---- 4. NOTIFICATIONS -------------------------------------------
+        if (project.AssignedPmId.HasValue && project.AssignedPmId != request.UpdatedBy)
+        {
+            var updaterName = await _context.Users
+                .Where(u => u.Id == request.UpdatedBy)
+                .Select(u => u.FullName)
+                .FirstOrDefaultAsync(cancellationToken) ?? "General Manager";
+
+            var notification = new Notification
+            {
+                Id = Guid.NewGuid(),
+                RecipientId = project.AssignedPmId.Value,
+                Type = "ProjectUpdate",
+                Title = $"Project Updated: {project.Name}",
+                Message = $"{updaterName} has updated the details for project {project.Name}.",
+                ReferenceId = project.Id,
+                ReferenceType = "Project",
+                IsRead = false,
+                CreatedAt = DateTime.UtcNow
+            };
+            _context.Notifications.Add(notification);
+        }
+
         await _context.SaveChangesAsync(cancellationToken);
         Console.WriteLine("Update saved successfully");
         return Unit.Value;
