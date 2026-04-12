@@ -60,7 +60,16 @@ export function AssignMembers() {
         
         return true;
       })
-      .sort((a, b) => b.YearsOfExperience - a.YearsOfExperience); // Step 15: Sort by experience
+      .sort((a, b) => {
+        const aProjects = a.CurrentProjects?.length || 0;
+        const bProjects = b.CurrentProjects?.length || 0;
+        
+        // Formula: (100 - (Projects * 10)) + (Exp * 5)
+        const aScore = (100 - (aProjects * 10)) + (a.YearsOfExperience * 5);
+        const bScore = (100 - (bProjects * 10)) + (b.YearsOfExperience * 5);
+        
+        return bScore - aScore;
+      });
   };
 
   // Check resource availability and calculate recommended start date
@@ -420,11 +429,25 @@ export function AssignMembers() {
                               No available employees for this role
                             </div>
                           ) : (
-                            availableEmployees.map((emp) => (
-                              <SelectItem key={emp.Id} value={emp.Id}>
-                                {emp.FullName} - {emp.YearsOfExperience}y Exp
-                              </SelectItem>
-                            ))
+                            availableEmployees.map((emp) => {
+                              const projects = emp.CurrentProjects?.length || 0;
+                              const score = (100 - (projects * 10)) + (emp.YearsOfExperience * 5);
+                              return (
+                                <SelectItem key={emp.Id} value={emp.Id}>
+                                  <div className="flex items-center justify-between w-full gap-8">
+                                    <span>{emp.FullName} ({emp.YearsOfExperience}y Exp)</span>
+                                    <div className="flex items-center gap-2 text-[10px]">
+                                      <Badge variant="outline" className="h-4 px-1 text-gray-400 font-normal">
+                                        {projects} Projs
+                                      </Badge>
+                                      <Badge variant="outline" className="h-4 px-1 text-blue-500 border-blue-200 bg-blue-50 font-semibold">
+                                        Score: {score}
+                                      </Badge>
+                                    </div>
+                                  </div>
+                                </SelectItem>
+                              );
+                            })
                           )}
                         </SelectContent>
                       </Select>
