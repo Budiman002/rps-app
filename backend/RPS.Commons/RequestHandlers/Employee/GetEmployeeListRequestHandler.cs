@@ -41,6 +41,12 @@ public class GetEmployeeListRequestHandler : IRequestHandler<GetEmployeeListRequ
                 IsUnavailable = unavailableEmployeeIds.Contains(x.Id),
                 CreatedAt = x.CreatedAt,
                 UpdatedAt = x.UpdatedAt,
+                CurrentProjects = _context.ProjectMembers
+                    .Include(pm => pm.Project)
+                    .Where(pm => pm.EmployeeId == x.Id && 
+                                (pm.Project.Status == ProjectStatus.Scheduled || pm.Project.Status == ProjectStatus.InProgress))
+                    .Select(pm => pm.Project.Name)
+                    .ToList(),
                 ExtensionRequest = _context.ContractExtendRequests
                     .Where(er => er.EmployeeId == x.Id && er.Status == RequestStatus.Pending)
                     .OrderByDescending(er => er.CreatedAt)

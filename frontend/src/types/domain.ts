@@ -92,7 +92,7 @@ export interface Employee {
   ContractType: "Permanent" | "Contract";
   ContractEndDate?: string;
   IsUnavailable: boolean;
-  CurrentProject?: string;
+  CurrentProjects?: string[];
   CreatedAt: string;
   UpdatedAt: string;
   ExtensionRequest?: ContractExtensionRequest;

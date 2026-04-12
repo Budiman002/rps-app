@@ -267,7 +267,17 @@ export function EmployeeManagement() {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <span className="text-sm text-gray-400">None</span>
+                        <div className="flex flex-wrap gap-1 max-w-[200px]">
+                          {employee.CurrentProjects && employee.CurrentProjects.length > 0 ? (
+                            employee.CurrentProjects.map((p, idx) => (
+                              <Badge key={idx} variant="secondary" className="text-[10px] bg-blue-50 text-blue-600 border-blue-100 font-normal">
+                                {p}
+                              </Badge>
+                            ))
+                          ) : (
+                            <span className="text-sm text-gray-400">None</span>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">

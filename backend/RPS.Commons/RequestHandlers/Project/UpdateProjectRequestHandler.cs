@@ -15,6 +15,8 @@ public class UpdateProjectRequestHandler : IRequestHandler<UpdateProjectRequest,
         _context = context;
     }
 
+    public async Task<Unit> Handle(UpdateProjectRequest request, CancellationToken cancellationToken)
+    {
         // Verify the user who is performing the update exists in the current database
         var updaterExists = await _context.Users.AnyAsync(u => u.Id == request.UpdatedBy, cancellationToken);
         if (!updaterExists)
@@ -238,7 +240,6 @@ public class UpdateProjectRequestHandler : IRequestHandler<UpdateProjectRequest,
         }
 
         await _context.SaveChangesAsync(cancellationToken);
-        Console.WriteLine("Update saved successfully");
         return Unit.Value;
     }
 }
