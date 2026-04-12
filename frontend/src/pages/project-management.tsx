@@ -252,7 +252,14 @@ export function ProjectManagement() {
         <TabsList>
           <TabsTrigger value="all">All Projects</TabsTrigger>
           {user?.role === "GM" && (
-            <TabsTrigger value="unassigned">Unassigned</TabsTrigger>
+            <TabsTrigger value="unassigned" className="gap-2">
+              Unassigned
+              {unassignedProjects.length > 0 && (
+                <Badge variant="secondary" className="px-1.5 py-0.5 h-5 min-w-[1.25rem] flex items-center justify-center text-[10px] bg-blue-100 text-blue-700 hover:bg-blue-100">
+                  {unassignedProjects.length}
+                </Badge>
+              )}
+            </TabsTrigger>
           )}
         </TabsList>
         <TabsContent value="all" className="mt-6">
