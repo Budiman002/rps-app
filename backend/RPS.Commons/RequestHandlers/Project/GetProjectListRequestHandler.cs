@@ -21,7 +21,9 @@ public class GetProjectListRequestHandler : IRequestHandler<GetProjectListReques
             .Include(x => x.RoleCompositions)
             .Include(x => x.ChangeRequests)
             .Include(x => x.Members)
-            .ThenInclude(x => x.Employee)
+                .ThenInclude(x => x.Employee)
+            .Include(x => x.Members)
+                .ThenInclude(x => x.RoleComposition)
             .AsQueryable();
 
         if (request.UserRole.Equals(UserRole.PM.ToString(), StringComparison.OrdinalIgnoreCase))
@@ -69,7 +71,9 @@ public class GetProjectListRequestHandler : IRequestHandler<GetProjectListReques
                 Email = m.Employee.Email,
                 JobTitle = m.Employee.JobTitle,
                 SeniorityLevel = m.Employee.SeniorityLevel,
-                YearsOfExperience = m.Employee.YearsOfExperience
+                YearsOfExperience = m.Employee.YearsOfExperience,
+                RoleCompositionId = m.RoleCompositionId,
+                RoleTitle = m.RoleComposition?.RoleTitle ?? string.Empty
             }).ToList(),
             RequestChanges = project.ChangeRequests.Select(cr => new ChangeRequestResponse
             {

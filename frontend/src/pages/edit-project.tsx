@@ -249,10 +249,11 @@ export function EditProject() {
 
     setLoading(true);
     try {
-      const payload: UpdateProjectRequest = {
+        const payload: UpdateProjectRequest = {
         NewStartDate: startDate || undefined,
         NewDurationWeeks: duration ? parseInt(duration) : undefined,
         NewEndDate: endDate || undefined,
+        AssignedPmId: project.AssignedPmId || undefined,
         Roles: roles.map(r => ({
           Id: r.id,
           RoleTitle: r.roleTitle,
@@ -355,7 +356,7 @@ export function EditProject() {
                       id="endDate"
                       type="date"
                       value={endDate}
-                      onChange={(e) => handleEndDateChange(e.target.value)}
+                      onChange={(e) => setEndDate(e.target.value)}
                     />
                   </div>
                 </div>
