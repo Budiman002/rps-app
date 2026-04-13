@@ -201,7 +201,7 @@ export function Dashboard() {
                         {formatDate(project.ActualStartDate || project.ExpectedStartDate)}
                       </TableCell>
                       <TableCell>
-                        {formatDate(project.EndDate)}
+                        {formatDate(project.EndDate || project.EstimatedEndDate)}
                       </TableCell>
                       <TableCell>{project.DurationWeeks}w</TableCell>
                       <TableCell>
