@@ -17,6 +17,22 @@ public class GetEmployeeListRequestHandler : IRequestHandler<GetEmployeeListRequ
 
     public async Task<List<EmployeeResponse>> Handle(GetEmployeeListRequest request, CancellationToken cancellationToken)
     {
+        // Auto-reject pending requests that have expired (older than 2 days)
+        var twoDAysAgo = DateTime.UtcNow.AddDays(-2);
+        var expiredRequests = await _context.ContractExtendRequests
+            .Where(er => er.Status == RequestStatus.Pending && er.CreatedAt <= twoDAysAgo)
+            .ToListAsync(cancellationToken);
+
+        if (expiredRequests.Any())
+        {
+            foreach (var expired in expiredRequests)
+            {
+                expired.Status = RequestStatus.Rejected;
+                expired.UpdatedAt = DateTime.UtcNow;
+            }
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+
         var unavailableEmployeeIds = await _context.ProjectMembers
             .Include(pm => pm.RoleComposition)
             .Include(pm => pm.Project)
@@ -43,7 +59,7 @@ public class GetEmployeeListRequestHandler : IRequestHandler<GetEmployeeListRequ
                 UpdatedAt = x.UpdatedAt,
                 CurrentProjects = _context.ProjectMembers
                     .Include(pm => pm.Project)
-                    .Where(pm => pm.EmployeeId == x.Id && 
+                    .Where(pm => pm.EmployeeId == x.Id &&
                                 (pm.Project.Status == ProjectStatus.Scheduled || pm.Project.Status == ProjectStatus.InProgress))
                     .Select(pm => pm.Project.Name)
                     .ToList(),
@@ -58,7 +74,8 @@ public class GetEmployeeListRequestHandler : IRequestHandler<GetEmployeeListRequ
                         RequestedDate = er.CreatedAt,
                         ProposedEndDate = er.RequestedEndDate,
                         Reason = er.Reason,
-                        Status = er.Status.ToString()
+                        Status = er.Status.ToString().ToLowerInvariant(),
+                        ExpiresAt = er.CreatedAt.AddDays(2)  // 2-day grace period for HR decision
                     })
                     .FirstOrDefault()
             })

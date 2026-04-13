@@ -27,8 +27,40 @@ public class CreateExtendContractRequestHandler : IRequestHandler<CreateExtendCo
             throw new KeyNotFoundException($"Employee with ID {request.EmployeeId} not found.");
         }
 
+        // Check if employee already has 2 finalized requests within the last 30 days
+        // Only count Approved/Rejected, not Pending (to allow multiple submissions before decision)
+        var requestsLast30Days = await _context.ContractExtendRequests
+            .Where(x => x.EmployeeId == request.EmployeeId &&
+                        x.CreatedAt >= DateTime.UtcNow.AddDays(-30) &&
+                        (x.Status == RequestStatus.Approved || x.Status == RequestStatus.Rejected))
+            .CountAsync(cancellationToken);
+
+        if (requestsLast30Days >= 2)
+        {
+            // Find the oldest finalized request in the 30-day window to calculate when next window opens
+            var oldestRequest = await _context.ContractExtendRequests
+                .Where(x => x.EmployeeId == request.EmployeeId &&
+                            x.CreatedAt >= DateTime.UtcNow.AddDays(-30) &&
+                            (x.Status == RequestStatus.Approved || x.Status == RequestStatus.Rejected))
+                .OrderBy(x => x.CreatedAt)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (oldestRequest == null)
+            {
+                throw new InvalidOperationException("Unable to determine oldest request for cooldown calculation.");
+            }
+
+            var nextAvailableDate = oldestRequest.CreatedAt.AddDays(30);
+            throw new ValidationException(new List<ValidationFailure>
+            {
+                new ValidationFailure(
+                    "EmployeeId",
+                    $"Maximum 2 contract extension requests allowed per 30 days. Next request can be submitted on {nextAvailableDate:yyyy-MM-dd}.")
+            });
+        }
+
         // Move complex validation from Validator to Handler to avoid DI scoping issues
-        if (employee.ContractEndDate.HasValue && request.RequestedEndDate.Date <= employee.ContractEndDate.Value.Date)
+        if (employee.ContractEndDate.HasValue && request.RequestedEndDate <= employee.ContractEndDate.Value)
         {
             throw new ValidationException(new List<ValidationFailure>
             {
@@ -57,7 +89,7 @@ public class CreateExtendContractRequestHandler : IRequestHandler<CreateExtendCo
 
         var gmUser = await _context.Users
             .FirstOrDefaultAsync(u => u.Id == request.RequestedBy, cancellationToken);
-        
+
         var gmName = gmUser?.FullName ?? "General Manager";
 
         foreach (var hr in hrUsers)

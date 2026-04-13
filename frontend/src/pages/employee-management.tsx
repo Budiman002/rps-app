@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { formatDate } from "@/functions/dateFormatter";
 import { useAuth } from "@/contexts/auth-context";
 import { useData } from "@/contexts/data-context";
+import type { ContractExtensionRequest } from "@/types/domain";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,21 +22,25 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Search, Calendar, CheckCircle2, XCircle } from "lucide-react";
+import { Search, Calendar, CheckCircle2, XCircle, History } from "lucide-react";
 import { toast } from "sonner";
 
 export function EmployeeManagement() {
   const { user } = useAuth();
-  const { employees, updateEmployee, requestContractExtension, approveContractExtension, rejectContractExtension } = useData();
+  const { employees, requestContractExtension, approveContractExtension, rejectContractExtension, getEmployeeExtensionHistory } = useData();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedEmployee, setSelectedEmployee] = useState<string | null>(null);
   const [newContractEndDate, setNewContractEndDate] = useState("");
   const [extensionReason, setExtensionReason] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogType, setDialogType] = useState<"extend" | "request">("extend");
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [historyEmployeeId, setHistoryEmployeeId] = useState<string | null>(null);
+  const [historyItems, setHistoryItems] = useState<ContractExtensionRequest[]>([]);
+  const [historyFilter, setHistoryFilter] = useState<"approved" | "rejected">("approved");
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   const filteredEmployees = useMemo(() => {
     return employees.filter(employee =>
@@ -44,6 +49,14 @@ export function EmployeeManagement() {
       employee.Email?.toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [employees, searchQuery]);
+
+  const historyEmployee = useMemo(() => {
+    return historyEmployeeId ? employees.find(e => e.Id === historyEmployeeId) : null;
+  }, [historyEmployeeId, employees]);
+
+  const filteredHistoryItems = useMemo(() => {
+    return historyItems.filter(item => item.Status?.toLowerCase() === historyFilter);
+  }, [historyItems, historyFilter]);
 
   if (user?.role !== "HR" && user?.role !== "GM") {
     return (
@@ -54,7 +67,7 @@ export function EmployeeManagement() {
     );
   }
 
-  const handleExtendContract = () => {
+  const handleExtendContract = async () => {
     if (!selectedEmployee) {
       toast.error("Please select an employee");
       return;
@@ -66,11 +79,15 @@ export function EmployeeManagement() {
       return;
     }
 
-    approveContractExtension(selectedEmployee);
-    toast.success("Contract extension approved");
-    setDialogOpen(false);
-    setSelectedEmployee(null);
-    setNewContractEndDate("");
+    try {
+      await approveContractExtension(employee.ExtensionRequest.Id);
+      toast.success("Contract extension approved");
+      setDialogOpen(false);
+      setSelectedEmployee(null);
+      setNewContractEndDate("");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to approve contract extension");
+    }
   };
 
   const handleRequestExtension = async () => {
@@ -105,9 +122,21 @@ export function EmployeeManagement() {
     }
   };
 
-  const handleRejectExtension = (employeeId: string) => {
-    rejectContractExtension(employeeId);
-    toast.info("Contract extension request rejected");
+  const handleRejectExtension = async (employeeId: string) => {
+    const employee = employees.find(e => e.Id === employeeId);
+    const requestId = employee?.ExtensionRequest?.Id;
+
+    if (!requestId) {
+      toast.error("No extension request found");
+      return;
+    }
+
+    try {
+      await rejectContractExtension(requestId);
+      toast.info("Contract extension request rejected");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to reject contract extension");
+    }
   };
 
   const openExtendDialog = (employeeId: string, currentEndDate?: string) => {
@@ -123,6 +152,23 @@ export function EmployeeManagement() {
     setExtensionReason("");
     setDialogType("request");
     setDialogOpen(true);
+  };
+
+  const openHistoryDialog = async (employeeId: string) => {
+    setHistoryEmployeeId(employeeId);
+    setHistoryOpen(true);
+    setHistoryFilter("approved");
+    setHistoryLoading(true);
+
+    try {
+      const history = await getEmployeeExtensionHistory(employeeId);
+      setHistoryItems(history);
+    } catch (error: any) {
+      toast.error(error.message || "Failed to load extension history");
+      setHistoryItems([]);
+    } finally {
+      setHistoryLoading(false);
+    }
   };
 
 
@@ -328,7 +374,7 @@ export function EmployeeManagement() {
                                 >
                                   Extend Locked
                                 </Button>
-                              ) : employee.ExtensionRequest?.Status === "pending" ? (
+                              ) : employee.ExtensionRequest?.Status?.toLowerCase() === "pending" ? (
                                 <>
                                   <Button
                                     size="sm"
@@ -349,11 +395,31 @@ export function EmployeeManagement() {
                                     <XCircle className="h-4 w-4" />
                                     Reject
                                   </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => openHistoryDialog(employee.Id)}
+                                    className="gap-2"
+                                  >
+                                    <History className="h-4 w-4" />
+                                    History
+                                  </Button>
                                 </>
                               ) : employee.ContractType?.toLowerCase() === "contract" ? (
-                                <span className="text-xs text-gray-400 italic">
-                                  Awaiting GM Request
-                                </span>
+                                <div className="flex items-center gap-2 justify-end">
+                                  <span className="text-xs text-gray-400 italic">
+                                    Awaiting GM Request
+                                  </span>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => openHistoryDialog(employee.Id)}
+                                    className="gap-2"
+                                  >
+                                    <History className="h-4 w-4" />
+                                    History
+                                  </Button>
+                                </div>
                               ) : null}
                             </>
                           )}
@@ -441,6 +507,66 @@ export function EmployeeManagement() {
             <Button onClick={dialogType === "extend" ? handleExtendContract : handleRequestExtension}>
               {dialogType === "extend" ? "Approve Extension" : "Submit Request"}
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Extension History - {historyEmployee?.FullName}</DialogTitle>
+            <DialogDescription>
+              Showing only extension requests with final decisions.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant={historyFilter === "approved" ? "default" : "outline"}
+                onClick={() => setHistoryFilter("approved")}
+              >
+                Extended
+              </Button>
+              <Button
+                size="sm"
+                variant={historyFilter === "rejected" ? "destructive" : "outline"}
+                onClick={() => setHistoryFilter("rejected")}
+              >
+                Rejected
+              </Button>
+            </div>
+
+            {historyLoading ? (
+              <p className="text-sm text-gray-500">Loading history...</p>
+            ) : filteredHistoryItems.length === 0 ? (
+              <p className="text-sm text-gray-500">No {historyFilter} history found for this employee.</p>
+            ) : (
+              <div className="space-y-3">
+                {filteredHistoryItems.map((item) => (
+                  <div key={item.Id} className="border rounded-lg p-4 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Badge
+                        variant={item.Status === "approved" ? "default" : "destructive"}
+                        className="capitalize"
+                      >
+                        {item.Status === "approved" ? "Extended" : "Rejected"}
+                      </Badge>
+                      <span className="text-xs text-gray-500">Requested: {formatDate(item.RequestedDate)}</span>
+                    </div>
+                    <div className="text-sm">
+                      <span className="text-gray-500">Proposed End Date:</span>{" "}
+                      <span className="font-medium">{formatDate(item.ProposedEndDate)}</span>
+                    </div>
+                    <div className="text-sm">
+                      <span className="text-gray-500">Reason:</span>{" "}
+                      <span>{item.Reason}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>

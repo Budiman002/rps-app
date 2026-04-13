@@ -1,18 +1,22 @@
 # Backend Guidelines — Resource Planning System (RPS)
+
 > Mengikuti standard Accelist Vibe-Code-Basic: https://github.com/accelist/Vibe-Code-Basic/blob/main/be-standard.md
 
 ## Project Overview
+
 Resource Planning System (RPS) adalah sistem internal perusahaan untuk manajemen sumber daya manusia dan proyek. Backend menyediakan REST API yang dikonsumsi oleh frontend React.
 
 ### Roles & Permission
-| Role | Akses |
-|---|---|
-| Marketing | Create project, Read all projects |
-| GM | Read all projects, Assign team, Edit project, Request extend contract |
-| PM | Read assigned projects, Request change |
-| HR | Read all employees, Process extend contract |
+
+| Role      | Akses                                                                 |
+| --------- | --------------------------------------------------------------------- |
+| Marketing | Create project, Read all projects                                     |
+| GM        | Read all projects, Assign team, Edit project, Request extend contract |
+| PM        | Read assigned projects, Request change                                |
+| HR        | Read all employees, Process extend contract                           |
 
 ### Status Project Flow
+
 ```
 Unassigned → Scheduled → In Progress → Complete
 ```
@@ -21,17 +25,17 @@ Unassigned → Scheduled → In Progress → Complete
 
 ## 1. Architecture & Stack
 
-| Layer | Technology | Purpose |
-|---|---|---|
-| Framework | .NET 10 | Runtime & SDK |
-| Language | C# | Primary language |
-| Database | PostgreSQL | Relational data store |
-| ORM | Entity Framework Core | Code-first data access |
-| Pattern | Clean Architecture + CQRS | Separation of concerns |
-| Mediator | MediatR | Decouples controllers from business logic |
-| Auth | JWT Bearer | Authentication & Authorization |
-| Validation | FluentValidation | Request model validation |
-| Password | BCrypt.Net-Next | Password hashing |
+| Layer      | Technology                | Purpose                                   |
+| ---------- | ------------------------- | ----------------------------------------- |
+| Framework  | .NET 10                   | Runtime & SDK                             |
+| Language   | C#                        | Primary language                          |
+| Database   | PostgreSQL                | Relational data store                     |
+| ORM        | Entity Framework Core     | Code-first data access                    |
+| Pattern    | Clean Architecture + CQRS | Separation of concerns                    |
+| Mediator   | MediatR                   | Decouples controllers from business logic |
+| Auth       | JWT Bearer                | Authentication & Authorization            |
+| Validation | FluentValidation          | Request model validation                  |
+| Password   | BCrypt.Net-Next           | Password hashing                          |
 
 ---
 
@@ -77,6 +81,7 @@ backend/
 ```
 
 ### Key Rules
+
 - **Feature folders**: File di RequestHandlers, Validators, RequestModels, ResponseModels WAJIB dikelompokkan per fitur
 - **One class per file**: Satu class per file, tidak boleh digabung
 - Hanya `RPS.WebAPI` yang runnable. `RPS.Commons`, `RPS.Contracts`, `RPS.Entities` adalah class libraries
@@ -86,6 +91,7 @@ backend/
 ## 3. Database Schema (ERD)
 
 ### Users
+
 ```
 id (uuid PK), full_name, email, password (hashed),
 role (GM/PM/Marketing/HR), contract_type (permanent/contract),
@@ -94,6 +100,7 @@ created_at, updated_at
 ```
 
 ### Projects
+
 ```
 id (uuid PK), name, client_name, description, notes_from_marketing,
 priority (Low/Medium/High/Critical),
@@ -104,6 +111,7 @@ created_at, updated_at
 ```
 
 ### ProjectRoleCompositions
+
 ```
 id (uuid PK), project_id FK, role_title,
 seniority_level (Senior/Junior/Intern),
@@ -112,12 +120,14 @@ quantity, created_at, updated_at
 ```
 
 ### ProjectMembers
+
 ```
 id (uuid PK), project_id FK, user_id FK,
 role_composition_id FK, assigned_by FK, assigned_at
 ```
 
 ### ChangeRequests
+
 ```
 id (uuid PK), project_id FK, requested_by FK,
 change_title, change_description,
@@ -128,6 +138,7 @@ status (Pending/Approved/Rejected), created_at, updated_at
 ```
 
 ### ContractExtendRequests
+
 ```
 id (uuid PK), employee_id FK, requested_by FK,
 reason, requested_end_date,
@@ -135,6 +146,7 @@ status (Pending/Approved/Rejected), created_at, updated_at
 ```
 
 ### Notifications
+
 ```
 id (uuid PK), recipient_id FK, type, title, message,
 reference_id (nullable), reference_type (nullable),
@@ -146,11 +158,13 @@ is_read, created_at
 ## 4. Design Patterns
 
 ### CQRS + MediatR
+
 - **Requests** (Commands/Queries): Simple DTOs di `RPS.Contracts/RequestModels`. Implement `IRequest<TResponse>`
 - **Handlers**: Di `RPS.Commons/RequestHandlers`. Implement `IRequestHandler<TRequest, TResponse>`. Satu handler per request
 - **Controllers** hanya memanggil `_mediator.Send(request)` — TIDAK ADA business logic di controller
 
 ### Contoh Flow
+
 ```
 Request HTTP → Controller → mediator.Send(request) → Handler → Database → Response
 ```
@@ -159,16 +173,16 @@ Request HTTP → Controller → mediator.Send(request) → Handler → Database 
 
 ## 5. Naming Convention
 
-| Element | Convention | Contoh |
-|---|---|---|
-| Class / Interface / Method / Property | PascalCase | `CreateProjectRequestHandler` |
-| Parameter / Local Variable | camelCase | `projectId`, `userId` |
-| Private Field | `_camelCase` | `_mediator`, `_context` |
-| Request Models | `[Action][Resource]Request` | `CreateProjectRequest` |
-| Response Models | `[Action][Resource]Response` | `ProjectResponse` |
-| Validators | `[RequestName]Validator` | `CreateProjectRequestValidator` |
-| Handlers | `[RequestName]Handler` | `CreateProjectRequestHandler` |
-| List Queries | `Get[Entity]ListRequest` | `GetProjectListRequest` |
+| Element                               | Convention                   | Contoh                          |
+| ------------------------------------- | ---------------------------- | ------------------------------- |
+| Class / Interface / Method / Property | PascalCase                   | `CreateProjectRequestHandler`   |
+| Parameter / Local Variable            | camelCase                    | `projectId`, `userId`           |
+| Private Field                         | `_camelCase`                 | `_mediator`, `_context`         |
+| Request Models                        | `[Action][Resource]Request`  | `CreateProjectRequest`          |
+| Response Models                       | `[Action][Resource]Response` | `ProjectResponse`               |
+| Validators                            | `[RequestName]Validator`     | `CreateProjectRequestValidator` |
+| Handlers                              | `[RequestName]Handler`       | `CreateProjectRequestHandler`   |
+| List Queries                          | `Get[Entity]ListRequest`     | `GetProjectListRequest`         |
 
 ---
 
@@ -209,6 +223,7 @@ public class ProjectController : ControllerBase
 ```
 
 ### Rules
+
 - Inherit dari `ControllerBase`
 - Gunakan `[FromQuery]` untuk GET, `[FromBody]` untuk POST/PUT
 - Selalu terima `CancellationToken`
@@ -296,6 +311,7 @@ public class Project
 ```
 
 ### Rules
+
 - Gunakan `[StringLength]` pada SEMUA string property
 - Gunakan Data Annotations (`[ForeignKey]`, `[InverseProperty]`)
 - Initialize navigation collections ke `new List<T>()`
@@ -304,6 +320,7 @@ public class Project
 ---
 
 ## 10. Migration Rules
+
 - JANGAN pernah edit migration yang sudah ada
 - Selalu buat migration baru untuk setiap perubahan schema
 - Naming migration harus deskriptif:
@@ -323,6 +340,7 @@ dotnet ef migrations add Fix
 ## 11. Business Rules
 
 ### Project
+
 - `estimated_end_date` = `expected_start_date + duration_weeks * 7`
 - Status default saat create: `Unassigned`
 - Saat GM assign tim:
@@ -332,18 +350,21 @@ dotnet ef migrations add Fix
 - PM hanya bisa read project yang `assigned_pm_id` = userId-nya
 
 ### Resource Assignment (GM)
+
 - Cek availability employee: tidak sedang assigned di project lain di periode yang sama
 - Cek kontrak cukup: `contract_end_date >= project.estimated_end_date`
 - Jika kontrak tidak cukup → kirim notifikasi ke HR
 - Sort rekomendasi: availability dulu, lalu `years_of_experience`
 
 ### Contract Extend
+
 - Tombol extend hanya muncul jika `contract_type = contract`
 - HR yang eksekusi setelah GM request
 
 ---
 
 ## 12. Environment & Credentials
+
 ```
 Backend URL:   http://localhost:5052 (atau port yang di-assign)
 Database:      rps_db
@@ -356,12 +377,14 @@ DB Password:   (isi sendiri di appsettings.json lokal — JANGAN DI-COMMIT)
 ## 13. API Endpoints Reference
 
 ### Auth
+
 ```
 POST /api/Auth/register   [AllowAnonymous]
 POST /api/Auth/login      [AllowAnonymous]
 ```
 
 ### Project
+
 ```
 POST /api/Project         [Authorize(Roles = "Marketing")]
 GET  /api/Project         [Authorize]
@@ -371,11 +394,13 @@ POST /api/Project/{id}/assign [Authorize(Roles = "GM")]
 ```
 
 ### Dashboard
+
 ```
 GET /api/Dashboard/stats  [Authorize]
 ```
 
 ### Change Requests
+
 ```
 GET  /api/ChangeRequest         [Authorize]
 POST /api/ChangeRequest         [Authorize(Roles = "PM")]
@@ -383,19 +408,22 @@ PUT  /api/ChangeRequest/{id}    [Authorize(Roles = "GM")]
 ```
 
 ### Users / Employees
+
 ```
 GET /api/User                   [Authorize(Roles = "HR,GM")]
 GET /api/User/available         [Authorize(Roles = "GM")]
 ```
 
 ### Contract
+
 ```
-GET  /api/ContractRequest       [Authorize]
-POST /api/ContractRequest       [Authorize(Roles = "GM")]
-PUT  /api/ContractRequest/{id}  [Authorize(Roles = "HR")]
+POST /api/ContractExtendRequest       [Authorize(Roles = "GM")]
+GET  /api/ContractExtendRequest/history/{employeeId}  [Authorize(Roles = "HR")]
+PUT  /api/ContractExtendRequest/{id}  [Authorize(Roles = "HR")]
 ```
 
 ### Notifications
+
 ```
 GET /api/Notification           [Authorize]
 PUT /api/Notification/{id}/read [Authorize]
@@ -404,6 +432,7 @@ PUT /api/Notification/{id}/read [Authorize]
 ---
 
 ## 14. Configuration Management
+
 - Centralize di `appsettings.json`
 - **JANGAN** hardcode connection string, API key, atau credentials di source code
 - `appsettings.json` sudah di-gitignore — setiap dev isi sendiri di lokal
@@ -414,6 +443,7 @@ PUT /api/Notification/{id}/read [Authorize]
 ## 15. Do's & Don'ts
 
 ### DO ✅
+
 - Satu class per file
 - Kelompokkan file per feature folder
 - Pakai async/await untuk semua database operation
@@ -422,6 +452,7 @@ PUT /api/Notification/{id}/read [Authorize]
 - Buat migration baru untuk setiap perubahan schema
 
 ### DON'T ❌
+
 - Jangan tulis business logic di controller
 - Jangan expose entity langsung ke response
 - Jangan edit migration yang sudah ada
@@ -432,6 +463,7 @@ PUT /api/Notification/{id}/read [Authorize]
 ---
 
 ## 16. Git Commit Convention
+
 ```
 feat: menambahkan endpoint create project
 fix: memperbaiki validasi contract end date

@@ -13,6 +13,7 @@ export const BackendApiUrl = {
   getEmployees: `${baseUrl}/Employee`,
   createChangeRequest: `${baseUrl}/projects/change-requests`,
   createContractExtendRequest: `${baseUrl}/ContractExtendRequest`,
+  getContractExtensionHistory: `${baseUrl}/ContractExtendRequest/history`,
   getNotifications: `${baseUrl}/Notification`,
   markNotificationAsRead: `${baseUrl}/Notification`,
 };
@@ -27,4 +28,8 @@ export function UpdateProjectById(id: string): string {
 
 export function MarkNotificationAsRead(id: string): string {
   return `${BackendApiUrl.markNotificationAsRead}/${encodeURIComponent(id)}/read`;
+}
+
+export function GetContractExtensionHistoryByEmployeeId(employeeId: string): string {
+  return `${BackendApiUrl.getContractExtensionHistory}/${encodeURIComponent(employeeId)}`;
 }

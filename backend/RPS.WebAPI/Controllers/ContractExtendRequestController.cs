@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using FluentValidation;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -25,8 +26,48 @@ public class ContractExtendRequestController : ControllerBase
         [FromBody] CreateExtendContractRequest request,
         CancellationToken cancellationToken)
     {
-        request.RequestedBy = GetUserId();
+        try
+        {
+            request.RequestedBy = GetUserId();
+            var result = await _mediator.Send(request, cancellationToken);
+            return Ok(result);
+        }
+        catch (ValidationException ex)
+        {
+            var message = ex.Errors.FirstOrDefault()?.ErrorMessage ?? ex.Message;
+            return BadRequest(new { message });
+        }
+    }
+
+    [HttpPut("{id:guid}")]
+    [Authorize(Roles = "HR")]
+    public async Task<IActionResult> UpdateStatus(
+        Guid id,
+        [FromBody] UpdateContractExtendRequestStatus request,
+        CancellationToken cancellationToken)
+    {
+        request.Id = id;
         var result = await _mediator.Send(request, cancellationToken);
+
+        if (!result)
+        {
+            return NotFound();
+        }
+
+        return NoContent();
+    }
+
+    [HttpGet("history/{employeeId:guid}")]
+    [Authorize(Roles = "HR")]
+    public async Task<ActionResult<List<ContractExtensionRequestResponse>>> GetHistory(
+        Guid employeeId,
+        CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(new GetContractExtensionHistoryRequest
+        {
+            EmployeeId = employeeId
+        }, cancellationToken);
+
         return Ok(result);
     }
 

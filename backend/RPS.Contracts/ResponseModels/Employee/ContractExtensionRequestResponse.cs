@@ -9,4 +9,5 @@ public class ContractExtensionRequestResponse
     public DateTime ProposedEndDate { get; set; }
     public string Reason { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;
+    public DateTime? ExpiresAt { get; set; }
 }

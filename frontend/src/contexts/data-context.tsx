@@ -1,6 +1,5 @@
 import { createContext, useContext, useState, ReactNode, useEffect } from "react";
-import { AppSettings } from "@/functions/AppSettings";
-import { BackendApiUrl } from "@/functions/BackendApiUrl";
+import { BackendApiUrl, GetContractExtensionHistoryByEmployeeId } from "@/functions/BackendApiUrl";
 import { useAuth } from "@/contexts/auth-context";
 import { useRpsApi } from "@/functions/api/rpsApi";
 import type {
@@ -43,6 +42,7 @@ interface DataContextType {
   requestContractExtension: (employeeId: string, proposedEndDate: string, reason: string) => Promise<void>;
   approveContractExtension: (requestId: string) => Promise<void>;
   rejectContractExtension: (requestId: string) => Promise<void>;
+  getEmployeeExtensionHistory: (employeeId: string) => Promise<ContractExtensionRequest[]>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -199,7 +199,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   };
 
   const approveContractExtension = async (requestId: string) => {
-    const url = `${AppSettings.apiGatewayBasePath}/ContractRequest/${requestId}`;
+    const url = `${BackendApiUrl.createContractExtendRequest}/${requestId}`;
     await fetchWithAuth(url, {
       method: "PUT",
       body: JSON.stringify({ Status: "Approved" }),
@@ -208,12 +208,18 @@ export function DataProvider({ children }: { children: ReactNode }) {
   };
 
   const rejectContractExtension = async (requestId: string) => {
-    const url = `${AppSettings.apiGatewayBasePath}/ContractRequest/${requestId}`;
+    const url = `${BackendApiUrl.createContractExtendRequest}/${requestId}`;
     await fetchWithAuth(url, {
       method: "PUT",
       body: JSON.stringify({ Status: "Rejected" }),
     });
     await refreshData();
+  };
+
+  const getEmployeeExtensionHistory = async (employeeId: string) => {
+    const url = GetContractExtensionHistoryByEmployeeId(employeeId);
+    const response = await fetchWithAuth(url, { method: "GET" });
+    return response.json() as Promise<ContractExtensionRequest[]>;
   };
 
   return (
@@ -234,6 +240,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         requestContractExtension,
         approveContractExtension,
         rejectContractExtension,
+        getEmployeeExtensionHistory,
       }}
     >
       {children}
