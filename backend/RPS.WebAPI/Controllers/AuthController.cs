@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using FluentValidation;
 using RPS.Contracts.RequestModels.Auth;
 
 namespace RPS.WebAPI.Controllers;
@@ -20,15 +21,43 @@ public class AuthController : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> Register([FromBody] RegisterRequest request, CancellationToken cancellationToken)
     {
-        var result = await _mediator.Send(request, cancellationToken);
-        return Ok(result);
+        try
+        {
+            var result = await _mediator.Send(request, cancellationToken);
+            return Ok(result);
+        }
+        catch (ValidationException ex)
+        {
+            return BadRequest(new
+            {
+                status = 400,
+                title = "Validation failed",
+                errors = ex.Errors.Select(error => new
+                {
+                    error.PropertyName,
+                    error.ErrorMessage
+                })
+            });
+        }
     }
 
     [HttpPost("login")]
     [AllowAnonymous]
     public async Task<IActionResult> Login([FromBody] LoginRequest request, CancellationToken cancellationToken)
     {
-        var result = await _mediator.Send(request, cancellationToken);
-        return Ok(result);
+        try
+        {
+            var result = await _mediator.Send(request, cancellationToken);
+            return Ok(result);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Unauthorized(new
+            {
+                status = 401,
+                title = "Unauthorized",
+                detail = ex.Message
+            });
+        }
     }
 }

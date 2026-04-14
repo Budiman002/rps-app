@@ -22,7 +22,7 @@ public class UpdateChangeRequestStatusHandler : IRequestHandler<UpdateChangeRequ
             .ThenInclude(p => p.RoleCompositions)
             .Include(c => c.Project.Members)
             .FirstOrDefaultAsync(x => x.Id == request.Id, cancellationToken);
-        
+
         if (changeRequest == null) return false;
 
         var statusEnum = Enum.Parse<RequestStatus>(request.Status, true);
@@ -32,15 +32,15 @@ public class UpdateChangeRequestStatusHandler : IRequestHandler<UpdateChangeRequ
         if (statusEnum == RequestStatus.Approved)
         {
             // Timeline Changes
-            if (changeRequest.NewStartDate.HasValue) 
+            if (changeRequest.NewStartDate.HasValue)
             {
                 changeRequest.Project.ExpectedStartDate = changeRequest.NewStartDate.Value;
-                if (changeRequest.Project.ActualStartDate.HasValue) 
+                if (changeRequest.Project.ActualStartDate.HasValue)
                     changeRequest.Project.ActualStartDate = changeRequest.NewStartDate.Value;
             }
-            if (changeRequest.NewEndDate.HasValue) 
+            if (changeRequest.NewEndDate.HasValue)
                 changeRequest.Project.EstimatedEndDate = changeRequest.NewEndDate.Value;
-            if (changeRequest.NewDurationWeeks.HasValue) 
+            if (changeRequest.NewDurationWeeks.HasValue)
                 changeRequest.Project.DurationWeeks = changeRequest.NewDurationWeeks.Value;
 
             JsonSerializerOptions jsonOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
@@ -51,25 +51,37 @@ public class UpdateChangeRequestStatusHandler : IRequestHandler<UpdateChangeRequ
                 var roleChanges = JsonSerializer.Deserialize<RoleChangesDto>(changeRequest.RoleChangesJson, jsonOptions);
                 if (roleChanges != null)
                 {
+                    var rolesToRemove = new List<ProjectRoleComposition>();
+                    var roleIdsToRemove = new HashSet<Guid>();
+                    var rolesToAdd = new List<ProjectRoleComposition>();
+
                     if (roleChanges.Removed != null)
                     {
                         foreach (var r in roleChanges.Removed)
                         {
                             var allocationType = Enum.TryParse<EmploymentStatus>(r.AllocationType, true, out var at) ? at : EmploymentStatus.Dedicated;
 
-                            var existing = changeRequest.Project.RoleCompositions.FirstOrDefault(rc => 
-                                rc.RoleTitle == r.Role && 
+                            var existing = changeRequest.Project.RoleCompositions.FirstOrDefault(rc =>
+                                rc.RoleTitle == r.Role &&
                                 rc.SeniorityLevel.ToString().Equals(r.Seniority, StringComparison.OrdinalIgnoreCase) &&
                                 rc.EmploymentStatus == allocationType);
-                                
+
                             if (existing != null)
                             {
                                 existing.Quantity -= r.Count;
                                 if (existing.Quantity <= 0)
                                 {
-                                    _context.ProjectRoleCompositions.Remove(existing);
+                                    if (roleIdsToRemove.Add(existing.Id))
+                                    {
+                                        rolesToRemove.Add(existing);
+                                    }
                                 }
                             }
+                        }
+
+                        if (rolesToRemove.Count > 0)
+                        {
+                            _context.ProjectRoleCompositions.RemoveRange(rolesToRemove);
                         }
                     }
 
@@ -80,8 +92,8 @@ public class UpdateChangeRequestStatusHandler : IRequestHandler<UpdateChangeRequ
                             var seniority = Enum.Parse<SeniorityLevel>(a.Seniority, true);
                             var allocationType = Enum.TryParse<EmploymentStatus>(a.AllocationType, true, out var at) ? at : EmploymentStatus.Dedicated;
 
-                            var existing = changeRequest.Project.RoleCompositions.FirstOrDefault(rc => 
-                                rc.RoleTitle == a.Role && 
+                            var existing = changeRequest.Project.RoleCompositions.FirstOrDefault(rc =>
+                                rc.RoleTitle == a.Role &&
                                 rc.SeniorityLevel == seniority &&
                                 rc.EmploymentStatus == allocationType);
 
@@ -102,9 +114,14 @@ public class UpdateChangeRequestStatusHandler : IRequestHandler<UpdateChangeRequ
                                     CreatedAt = DateTime.UtcNow,
                                     UpdatedAt = DateTime.UtcNow
                                 };
-                                _context.ProjectRoleCompositions.Add(newRc);
+                                rolesToAdd.Add(newRc);
                                 changeRequest.Project.RoleCompositions.Add(newRc);
                             }
+                        }
+
+                        if (rolesToAdd.Count > 0)
+                        {
+                            _context.ProjectRoleCompositions.AddRange(rolesToAdd);
                         }
                     }
                 }
@@ -116,6 +133,11 @@ public class UpdateChangeRequestStatusHandler : IRequestHandler<UpdateChangeRequ
                 var memberChanges = JsonSerializer.Deserialize<MemberChangesDto>(changeRequest.MemberChangesJson, jsonOptions);
                 if (memberChanges != null)
                 {
+                    var membersToRemove = new List<ProjectMember>();
+                    var memberIdsToRemove = new HashSet<Guid>();
+                    var membersToAdd = new List<ProjectMember>();
+                    var roleCompositionsToAdd = new List<ProjectRoleComposition>();
+
                     if (memberChanges.Removed != null)
                     {
                         foreach (var m in memberChanges.Removed)
@@ -123,8 +145,16 @@ public class UpdateChangeRequestStatusHandler : IRequestHandler<UpdateChangeRequ
                             var existing = changeRequest.Project.Members.FirstOrDefault(pm => pm.EmployeeId == m.EmployeeId);
                             if (existing != null)
                             {
-                                _context.ProjectMembers.Remove(existing);
+                                if (memberIdsToRemove.Add(existing.Id))
+                                {
+                                    membersToRemove.Add(existing);
+                                }
                             }
+                        }
+
+                        if (membersToRemove.Count > 0)
+                        {
+                            _context.ProjectMembers.RemoveRange(membersToRemove);
                         }
                     }
 
@@ -136,8 +166,8 @@ public class UpdateChangeRequestStatusHandler : IRequestHandler<UpdateChangeRequ
                             var allocationType = Enum.TryParse<EmploymentStatus>(a.AllocationType, true, out var at) ? at : EmploymentStatus.Dedicated;
 
                             // We must find the role composition in the DB/local context
-                            var roleComp = changeRequest.Project.RoleCompositions.FirstOrDefault(rc => 
-                                rc.RoleTitle == a.Role && 
+                            var roleComp = changeRequest.Project.RoleCompositions.FirstOrDefault(rc =>
+                                rc.RoleTitle == a.Role &&
                                 rc.SeniorityLevel == seniority &&
                                 rc.EmploymentStatus == allocationType);
 
@@ -155,7 +185,7 @@ public class UpdateChangeRequestStatusHandler : IRequestHandler<UpdateChangeRequ
                                     CreatedAt = DateTime.UtcNow,
                                     UpdatedAt = DateTime.UtcNow
                                 };
-                                _context.ProjectRoleCompositions.Add(roleComp);
+                                roleCompositionsToAdd.Add(roleComp);
                                 changeRequest.Project.RoleCompositions.Add(roleComp);
                             }
 
@@ -172,14 +202,24 @@ public class UpdateChangeRequestStatusHandler : IRequestHandler<UpdateChangeRequ
                                     AssignedBy = changeRequest.RequestedBy,
                                     AssignedAt = DateTime.UtcNow
                                 };
-                                _context.ProjectMembers.Add(newPm);
+                                membersToAdd.Add(newPm);
                                 changeRequest.Project.Members.Add(newPm);
                             }
+                        }
+
+                        if (roleCompositionsToAdd.Count > 0)
+                        {
+                            _context.ProjectRoleCompositions.AddRange(roleCompositionsToAdd);
+                        }
+
+                        if (membersToAdd.Count > 0)
+                        {
+                            _context.ProjectMembers.AddRange(membersToAdd);
                         }
                     }
                 }
             }
-            
+
             changeRequest.Project.UpdatedAt = DateTime.UtcNow;
         }
 

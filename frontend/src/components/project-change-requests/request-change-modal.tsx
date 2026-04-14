@@ -278,6 +278,24 @@ export function RequestChangeModal({ open, onOpenChange, project, employees, onS
         toast.error("No roles Available in this project to remove");
         return;
       }
+
+      const allRoleOptions = new Set(
+        project.RoleCompositions.map(
+          (tc) => `${tc.RoleTitle}|${tc.SeniorityLevel}|${tc.EmploymentStatus?.toLowerCase() || "dedicated"}`,
+        ),
+      );
+
+      const selectedRoleOptions = new Set(
+        roleChanges.removed
+          .filter((r) => r.role.trim().length > 0)
+          .map((r) => `${r.role}|${r.seniority}|${r.allocationType || "dedicated"}`),
+      );
+
+      if (selectedRoleOptions.size >= allRoleOptions.size) {
+        toast.error("No more roles available to remove");
+        return;
+      }
+
       setRoleChanges({
         ...roleChanges,
         removed: [...roleChanges.removed, { role: "", seniority: "Intern", allocationType: "dedicated", count: 1 }],
@@ -296,6 +314,19 @@ export function RequestChangeModal({ open, onOpenChange, project, employees, onS
         toast.error("No team members available in this project to remove");
         return;
       }
+
+      const allMemberIds = new Set(project.Members.map((m) => m.Id));
+      const selectedMemberIds = new Set(
+        employeeChanges.removed
+          .filter((e) => e.employeeId.trim().length > 0)
+          .map((e) => e.employeeId),
+      );
+
+      if (selectedMemberIds.size >= allMemberIds.size) {
+        toast.error("No more team members available to remove");
+        return;
+      }
+
       setEmployeeChanges({
         ...employeeChanges,
         removed: [...employeeChanges.removed, { employeeId: "", role: "", seniority: "Intern" }],
@@ -545,6 +576,12 @@ export function RequestChangeModal({ open, onOpenChange, project, employees, onS
 
                 {roleChanges.removed.map((role, index) => {
                   const currentValue = role.role ? `${role.role}|${role.seniority}|${role.allocationType || 'dedicated'}` : "";
+                  const selectedRoleOptionsExceptCurrent = new Set(
+                    roleChanges.removed
+                      .filter((_, i) => i !== index)
+                      .filter((r) => r.role.trim().length > 0)
+                      .map((r) => `${r.role}|${r.seniority}|${r.allocationType || "dedicated"}`),
+                  );
                   return (
                   <div key={index} className="flex flex-col xl:flex-row xl:items-end gap-2">
                     <Select
@@ -566,6 +603,9 @@ export function RequestChangeModal({ open, onOpenChange, project, employees, onS
                       <SelectContent>
                         {project.RoleCompositions?.map((tc) => {
                           const optionValue = `${tc.RoleTitle}|${tc.SeniorityLevel}|${tc.EmploymentStatus?.toLowerCase() || 'dedicated'}`;
+                          if (selectedRoleOptionsExceptCurrent.has(optionValue) && optionValue !== currentValue) {
+                            return null;
+                          }
                           return (
                             <SelectItem key={optionValue} value={optionValue}>
                               {tc.RoleTitle} ({tc.SeniorityLevel}) - {tc.EmploymentStatus} (Qty: {tc.Quantity})
@@ -718,6 +758,14 @@ export function RequestChangeModal({ open, onOpenChange, project, employees, onS
 
                 {employeeChanges.removed.map((emp, index) => (
                   <div key={index} className="flex flex-col xl:flex-row xl:items-end gap-2">
+                    {(() => {
+                      const selectedMemberIdsExceptCurrent = new Set(
+                        employeeChanges.removed
+                          .filter((_, i) => i !== index)
+                          .filter((e) => e.employeeId.trim().length > 0)
+                          .map((e) => e.employeeId),
+                      );
+                      return (
                     <Select
                       value={emp.employeeId}
                       onValueChange={(value) => {
@@ -738,6 +786,9 @@ export function RequestChangeModal({ open, onOpenChange, project, employees, onS
                       </SelectTrigger>
                       <SelectContent>
                         {project.Members?.map((member) => {
+                          if (selectedMemberIdsExceptCurrent.has(member.Id) && member.Id !== emp.employeeId) {
+                            return null;
+                          }
                           const employee = employees.find(e => e.Id === member.Id);
                           return (
                             <SelectItem key={member.Id} value={member.Id}>
@@ -747,6 +798,8 @@ export function RequestChangeModal({ open, onOpenChange, project, employees, onS
                         })}
                       </SelectContent>
                     </Select>
+                      );
+                    })()}
                     <Button
                       type="button"
                       variant="ghost"

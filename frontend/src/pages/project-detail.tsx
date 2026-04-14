@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate, useLocation } from "react-router";
 import { useAuth } from "@/contexts/auth-context";
 import { useData } from "@/contexts/data-context";
@@ -124,6 +124,18 @@ export function ProjectDetail() {
       });
     }
   }, [isPM, location.pathname, location.state, navigate]);
+
+  const sortedRequiredRoles = useMemo(() => {
+    const roles = [...(project.RoleCompositions || [])];
+    roles.sort((a, b) => {
+      const byTitle = a.RoleTitle.localeCompare(b.RoleTitle, undefined, { sensitivity: "base" });
+      if (byTitle !== 0) return byTitle;
+      const bySeniority = a.SeniorityLevel.localeCompare(b.SeniorityLevel, undefined, { sensitivity: "base" });
+      if (bySeniority !== 0) return bySeniority;
+      return (a.EmploymentStatus || "").localeCompare(b.EmploymentStatus || "", undefined, { sensitivity: "base" });
+    });
+    return roles;
+  }, [project.RoleCompositions]);
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
@@ -332,8 +344,8 @@ export function ProjectDetail() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            {project.RoleCompositions?.map((comp, index) => (
-              <div key={index} className="p-4 border rounded-lg">
+            {sortedRequiredRoles.map((comp, index) => (
+              <div key={`${comp.RoleTitle}-${comp.SeniorityLevel}-${comp.EmploymentStatus}-${index}`} className="p-4 border rounded-lg">
                 <div className="font-medium">{comp.RoleTitle}</div>
                 <div className="flex items-center justify-between mt-2">
                   <Badge variant="outline" className="capitalize">

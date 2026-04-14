@@ -171,7 +171,7 @@ export function ChangeRequestsSection({
                     {getStatusBadge(request.Status)}
                   </div>
                   <p className="text-sm text-gray-500">
-                    Requested on {formatDateTime(request.CreatedAt)}
+                    Requested on {formatDateTime(request.CreatedAt, "Asia/Jakarta")} (WIB)
                   </p>
                 </div>
                 {canManage && request.Status === "Pending" && (
