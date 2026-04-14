@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using RPS.Contracts.RequestModels.Dashboard;
 using RPS.Contracts.ResponseModels.Dashboard;
 using RPS.Entities;
+// remove unnecessary usings di semua file
 
 namespace RPS.Commons.RequestHandlers.Dashboard;
 
@@ -24,6 +25,8 @@ public class GetDashboardStatsRequestHandler : IRequestHandler<GetDashboardStats
             query = query.Where(x => x.AssignedPmId == request.UserId);
         }
 
+        // tidak efektif jika CountAsync untuk setiap status, 5x round trip ke DB
+        // lebih baik pakai single query - grouping + ToListAsync baru di return filter per status
         return new DashboardStatsResponse
         {
             Total = await query.CountAsync(cancellationToken),

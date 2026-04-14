@@ -18,6 +18,7 @@ public class LoginRequestHandler : IRequestHandler<LoginRequest, AuthResponse>
 
     public async Task<AuthResponse> Handle(LoginRequest request, CancellationToken cancellationToken)
     {
+        // email yang disimpan ke DB ketika register apakah udah normalized - ToLower?
         var user = await _context.Users
             .FirstOrDefaultAsync(x => x.Email == request.Email, cancellationToken);
 

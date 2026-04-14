@@ -15,6 +15,7 @@ public class UpdateChangeRequestStatusHandler : IRequestHandler<UpdateChangeRequ
         _context = context;
     }
 
+    // Untuk operation .Add & .Remove yang di dalam loop, jika possible dalam case ini, consider pakai .AddRange & .RemoveRange
     public async Task<bool> Handle(UpdateChangeRequestStatus request, CancellationToken cancellationToken)
     {
         var changeRequest = await _context.ChangeRequests

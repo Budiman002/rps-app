@@ -27,6 +27,10 @@ public class CreateExtendContractRequestHandler : IRequestHandler<CreateExtendCo
             throw new KeyNotFoundException($"Employee with ID {request.EmployeeId} not found.");
         }
 
+        // Query line 34 & 43 sama persis, hanya beda di sorting & count
+        // Lebih baik 1x query ToListAsync, tinggal count & ambil data paling pertama
+        // Biasakan memakai AsNoTracking di query yang fungsinya hanya untuk tampilkan data
+
         // Check if employee already has 2 finalized requests within the last 30 days
         // Only count Approved/Rejected, not Pending (to allow multiple submissions before decision)
         var requestsLast30Days = await _context.ContractExtendRequests
@@ -106,6 +110,8 @@ public class CreateExtendContractRequestHandler : IRequestHandler<CreateExtendCo
                 IsRead = false,
                 CreatedAt = DateTime.UtcNow
             };
+
+            // Lebih baik simpan di var terpisah kemudian pakai AddRange
             _context.Notifications.Add(notification);
         }
 
