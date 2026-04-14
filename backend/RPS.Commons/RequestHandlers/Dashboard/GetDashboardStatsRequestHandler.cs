@@ -24,13 +24,18 @@ public class GetDashboardStatsRequestHandler : IRequestHandler<GetDashboardStats
             query = query.Where(x => x.AssignedPmId == request.UserId);
         }
 
+        var grouped = await query
+            .GroupBy(x => x.Status)
+            .Select(g => new { Status = g.Key, Count = g.Count() })
+            .ToListAsync(cancellationToken);
+
         return new DashboardStatsResponse
         {
-            Total = await query.CountAsync(cancellationToken),
-            Unassigned = await query.CountAsync(x => x.Status == ProjectStatus.Unassigned, cancellationToken),
-            Scheduled = await query.CountAsync(x => x.Status == ProjectStatus.Scheduled, cancellationToken),
-            InProgress = await query.CountAsync(x => x.Status == ProjectStatus.InProgress, cancellationToken),
-            Completed = await query.CountAsync(x => x.Status == ProjectStatus.Complete, cancellationToken)
+            Total = grouped.Sum(g => g.Count),
+            Unassigned = grouped.FirstOrDefault(g => g.Status == ProjectStatus.Unassigned)?.Count ?? 0,
+            Scheduled = grouped.FirstOrDefault(g => g.Status == ProjectStatus.Scheduled)?.Count ?? 0,
+            InProgress = grouped.FirstOrDefault(g => g.Status == ProjectStatus.InProgress)?.Count ?? 0,
+            Completed = grouped.FirstOrDefault(g => g.Status == ProjectStatus.Complete)?.Count ?? 0
         };
     }
 }
