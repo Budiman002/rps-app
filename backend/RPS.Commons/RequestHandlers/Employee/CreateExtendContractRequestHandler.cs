@@ -20,6 +20,7 @@ public class CreateExtendContractRequestHandler : IRequestHandler<CreateExtendCo
     public async Task<CreateExtendContractResponse> Handle(CreateExtendContractRequest request, CancellationToken cancellationToken)
     {
         var employee = await _context.Employees
+            .AsNoTracking()
             .FirstOrDefaultAsync(x => x.Id == request.EmployeeId, cancellationToken);
 
         if (employee == null)
@@ -29,26 +30,18 @@ public class CreateExtendContractRequestHandler : IRequestHandler<CreateExtendCo
 
         // Check if employee already has 2 finalized requests within the last 30 days
         // Only count Approved/Rejected, not Pending (to allow multiple submissions before decision)
-        var requestsLast30Days = await _context.ContractExtendRequests
+        var recentRequests = await _context.ContractExtendRequests
+            .AsNoTracking()
             .Where(x => x.EmployeeId == request.EmployeeId &&
                         x.CreatedAt >= DateTime.UtcNow.AddDays(-30) &&
                         (x.Status == RequestStatus.Approved || x.Status == RequestStatus.Rejected))
-            .CountAsync(cancellationToken);
+            .OrderBy(x => x.CreatedAt)
+            .ToListAsync(cancellationToken);
 
-        if (requestsLast30Days >= 2)
+        if (recentRequests.Count >= 2)
         {
             // Find the oldest finalized request in the 30-day window to calculate when next window opens
-            var oldestRequest = await _context.ContractExtendRequests
-                .Where(x => x.EmployeeId == request.EmployeeId &&
-                            x.CreatedAt >= DateTime.UtcNow.AddDays(-30) &&
-                            (x.Status == RequestStatus.Approved || x.Status == RequestStatus.Rejected))
-                .OrderBy(x => x.CreatedAt)
-                .FirstOrDefaultAsync(cancellationToken);
-
-            if (oldestRequest == null)
-            {
-                throw new InvalidOperationException("Unable to determine oldest request for cooldown calculation.");
-            }
+            var oldestRequest = recentRequests.First();
 
             var nextAvailableDate = oldestRequest.CreatedAt.AddDays(30);
             throw new ValidationException(new List<ValidationFailure>
@@ -84,17 +77,20 @@ public class CreateExtendContractRequestHandler : IRequestHandler<CreateExtendCo
 
         // Notify HR users
         var hrUsers = await _context.Users
+            .AsNoTracking()
             .Where(u => u.Role == UserRole.HR)
             .ToListAsync(cancellationToken);
 
         var gmUser = await _context.Users
+            .AsNoTracking()
             .FirstOrDefaultAsync(u => u.Id == request.RequestedBy, cancellationToken);
 
         var gmName = gmUser?.FullName ?? "General Manager";
 
+        var notifications = new List<RPS.Entities.Notification>();
         foreach (var hr in hrUsers)
         {
-            var notification = new RPS.Entities.Notification
+            notifications.Add(new RPS.Entities.Notification
             {
                 Id = Guid.NewGuid(),
                 RecipientId = hr.Id,
@@ -105,9 +101,9 @@ public class CreateExtendContractRequestHandler : IRequestHandler<CreateExtendCo
                 ReferenceType = "ContractExtendRequest",
                 IsRead = false,
                 CreatedAt = DateTime.UtcNow
-            };
-            _context.Notifications.Add(notification);
+            });
         }
+        _context.Notifications.AddRange(notifications);
 
         await _context.SaveChangesAsync(cancellationToken);
 
