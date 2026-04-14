@@ -6,8 +6,20 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import { ArrowLeft, Plus, Trash2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
@@ -54,7 +66,13 @@ export function AddProject() {
   });
 
   const [teamRoles, setTeamRoles] = useState<TeamRole[]>([
-    { id: "1", role: "Project Manager", seniority: "Senior", allocationType: "dedicated", count: 1 },
+    {
+      id: "1",
+      role: "Project Manager",
+      seniority: "Senior",
+      allocationType: "dedicated",
+      count: 1,
+    },
   ]);
 
   const [loading, setLoading] = useState(false);
@@ -68,7 +86,7 @@ export function AddProject() {
   };
 
   const handleInputChange = (field: keyof ProjectFormData, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   const addTeamRole = () => {
@@ -79,32 +97,43 @@ export function AddProject() {
         role: "",
         seniority: "Junior",
         allocationType: "dedicated",
-        count: 1
+        count: 1,
       },
     ]);
   };
 
-  const updateTeamRole = (id: string, field: keyof TeamRole, value: string | number) => {
-    setTeamRoles(teamRoles.map(role =>
-      role.id === id ? { ...role, [field]: value } : role
-    ));
+  const updateTeamRole = (
+    id: string,
+    field: keyof TeamRole,
+    value: string | number,
+  ) => {
+    setTeamRoles(
+      teamRoles.map((role) =>
+        role.id === id ? { ...role, [field]: value } : role,
+      ),
+    );
   };
 
   const removeTeamRole = (id: string) => {
     if (teamRoles.length > 1) {
-      setTeamRoles(teamRoles.filter(role => role.id !== id));
+      setTeamRoles(teamRoles.filter((role) => role.id !== id));
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.name || !formData.clientName || !formData.expectedStartDate || !formData.duration) {
+    if (
+      !formData.name ||
+      !formData.clientName ||
+      !formData.expectedStartDate ||
+      !formData.duration
+    ) {
       toast.error("Please fill in all required fields");
       return;
     }
 
-    const hasEmptyRoles = teamRoles.some(role => !role.role);
+    const hasEmptyRoles = teamRoles.some((role) => !role.role);
     if (hasEmptyRoles) {
       toast.error("Please specify all team roles");
       return;
@@ -113,7 +142,8 @@ export function AddProject() {
     setLoading(true);
     try {
       const durationWeeks = parseInt(formData.duration);
-      const estimatedEndDate = calculateEndDate(formData.expectedStartDate, durationWeeks) || "";
+      const estimatedEndDate =
+        calculateEndDate(formData.expectedStartDate, durationWeeks) || "";
 
       await addProject({
         Name: formData.name,
@@ -124,19 +154,20 @@ export function AddProject() {
         EstimatedEndDate: estimatedEndDate,
         Priority: formData.priority,
         NotesFromMarketing: formData.notes,
-        RoleCompositions: teamRoles.map(r => ({
-           RoleTitle: r.role,
-           SeniorityLevel: r.seniority,
-           Quantity: r.count,
-           EmploymentStatus: r.allocationType
-        }))
+        RoleCompositions: teamRoles.map((r) => ({
+          RoleTitle: r.role,
+          SeniorityLevel: r.seniority,
+          Quantity: r.count,
+          EmploymentStatus: (r.allocationType.charAt(0).toUpperCase() +
+            r.allocationType.slice(1)) as "Dedicated" | "Parallel",
+        })),
       });
 
       toast.success("Project created successfully", {
         description: "GM has been notified to assign team members",
       });
       navigate("/app/projects");
-    } catch (error) {
+    } catch {
       toast.error("Failed to create project");
     } finally {
       setLoading(false);
@@ -146,7 +177,9 @@ export function AddProject() {
   if (user?.role !== "Marketing" && user?.role !== "GM") {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-500">You don't have permission to add projects</p>
+        <p className="text-gray-500">
+          You don't have permission to add projects
+        </p>
       </div>
     );
   }
@@ -175,7 +208,9 @@ export function AddProject() {
           Back to Projects
         </Button>
         <h1 className="text-3xl font-bold">Add New Project</h1>
-        <p className="text-gray-500 mt-1">Submit a new project for resource planning</p>
+        <p className="text-gray-500 mt-1">
+          Submit a new project for resource planning
+        </p>
       </div>
 
       <form onSubmit={handleSubmit}>
@@ -183,7 +218,8 @@ export function AddProject() {
           <CardHeader>
             <CardTitle>Project Information</CardTitle>
             <CardDescription>
-              Provide details about the project for GM review and team assignment
+              Provide details about the project for GM review and team
+              assignment
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -204,7 +240,9 @@ export function AddProject() {
                 <Input
                   id="clientName"
                   value={formData.clientName}
-                  onChange={(e) => handleInputChange("clientName", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("clientName", e.target.value)
+                  }
                   placeholder="e.g., TechCorp Inc."
                   required
                 />
@@ -216,7 +254,9 @@ export function AddProject() {
               <Textarea
                 id="description"
                 value={formData.description}
-                onChange={(e) => handleInputChange("description", e.target.value)}
+                onChange={(e) =>
+                  handleInputChange("description", e.target.value)
+                }
                 placeholder="Describe the project scope and objectives"
                 rows={4}
               />
@@ -229,12 +269,16 @@ export function AddProject() {
               <h3 className="font-semibold">Timeline</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="expectedStartDate">Expected Start Date *</Label>
+                  <Label htmlFor="expectedStartDate">
+                    Expected Start Date *
+                  </Label>
                   <Input
                     id="expectedStartDate"
                     type="date"
                     value={formData.expectedStartDate}
-                    onChange={(e) => handleInputChange("expectedStartDate", e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("expectedStartDate", e.target.value)
+                    }
                     required
                   />
                 </div>
@@ -245,7 +289,9 @@ export function AddProject() {
                     type="number"
                     min="1"
                     value={formData.duration}
-                    onChange={(e) => handleInputChange("duration", e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("duration", e.target.value)
+                    }
                     placeholder="e.g., 12"
                     required
                   />
@@ -256,7 +302,10 @@ export function AddProject() {
                     type="text"
                     value={
                       formData.expectedStartDate && formData.duration
-                        ? calculateEndDate(formData.expectedStartDate, parseInt(formData.duration))
+                        ? calculateEndDate(
+                            formData.expectedStartDate,
+                            parseInt(formData.duration),
+                          )
                         : ""
                     }
                     disabled
@@ -274,7 +323,9 @@ export function AddProject() {
                 <Label htmlFor="priority">Priority Level</Label>
                 <Select
                   value={formData.priority}
-                  onValueChange={(value) => handleInputChange("priority", value)}
+                  onValueChange={(value) =>
+                    handleInputChange("priority", value)
+                  }
                 >
                   <SelectTrigger id="priority">
                     <SelectValue />
@@ -306,7 +357,13 @@ export function AddProject() {
             <div className="space-y-4">
               <div className="flex justify-between items-center">
                 <h3 className="font-semibold">Team Composition</h3>
-                <Button type="button" variant="outline" size="sm" onClick={addTeamRole} className="gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={addTeamRole}
+                  className="gap-2"
+                >
                   <Plus className="h-4 w-4" />
                   Add Role
                 </Button>
@@ -318,7 +375,9 @@ export function AddProject() {
                     <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-3">
                       <Select
                         value={teamRole.role}
-                        onValueChange={(value) => updateTeamRole(teamRole.id, "role", value)}
+                        onValueChange={(value) =>
+                          updateTeamRole(teamRole.id, "role", value)
+                        }
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Select role" />
@@ -334,7 +393,9 @@ export function AddProject() {
 
                       <Select
                         value={teamRole.seniority}
-                        onValueChange={(value) => updateTeamRole(teamRole.id, "seniority", value)}
+                        onValueChange={(value) =>
+                          updateTeamRole(teamRole.id, "seniority", value)
+                        }
                       >
                         <SelectTrigger>
                           <SelectValue />
@@ -348,7 +409,9 @@ export function AddProject() {
 
                       <Select
                         value={teamRole.allocationType}
-                        onValueChange={(value) => updateTeamRole(teamRole.id, "allocationType", value)}
+                        onValueChange={(value) =>
+                          updateTeamRole(teamRole.id, "allocationType", value)
+                        }
                       >
                         <SelectTrigger>
                           <SelectValue />
@@ -363,7 +426,13 @@ export function AddProject() {
                         type="number"
                         min="1"
                         value={teamRole.count}
-                        onChange={(e) => updateTeamRole(teamRole.id, "count", parseInt(e.target.value))}
+                        onChange={(e) =>
+                          updateTeamRole(
+                            teamRole.id,
+                            "count",
+                            parseInt(e.target.value),
+                          )
+                        }
                         placeholder="Count"
                       />
                     </div>
@@ -399,5 +468,3 @@ export function AddProject() {
     </div>
   );
 }
-
-

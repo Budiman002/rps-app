@@ -107,11 +107,6 @@ export function ProjectDetail() {
       .slice(0, 2);
   };
 
-  const getEmployeeDetails = (employeeId: string) => {
-    return employees.find((e) => e.Id === employeeId);
-  };
-
-
   // Check if current user is the PM of this project
   const isPM = user?.role === "PM";
 
@@ -175,7 +170,11 @@ export function ProjectDetail() {
             )}
             {user?.role === "GM" && (
               <Button
-                onClick={() => navigate(`/app/projects/${project.Id}/edit`, { state: { from: location.state?.from } })}
+                onClick={() =>
+                  navigate(`/app/projects/${project.Id}/edit`, {
+                    state: { from: location.state?.from },
+                  })
+                }
                 className="gap-2"
               >
                 <Edit className="h-4 w-4" />
@@ -214,7 +213,9 @@ export function ProjectDetail() {
               <div>
                 <div className="text-sm text-gray-500">Start Date</div>
                 <div className="font-medium">
-                  {formatDate(project.ActualStartDate || project.ExpectedStartDate)}
+                  {formatDate(
+                    project.ActualStartDate || project.ExpectedStartDate,
+                  )}
                 </div>
               </div>
             </div>
@@ -302,9 +303,7 @@ export function ProjectDetail() {
                         </AvatarFallback>
                       </Avatar>
                       <div>
-                        <div className="font-medium">
-                          {member.FullName}
-                        </div>
+                        <div className="font-medium">{member.FullName}</div>
                         <div className="text-sm text-gray-500">
                           {member.Email}
                         </div>

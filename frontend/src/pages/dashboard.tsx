@@ -16,8 +16,7 @@ import {
 } from "@/components/ui/table";
 import { GanttChart } from "@/components/dashboard/gantt-chart";
 import { GlobalSearch } from "@/components/search/global-search";
-import { Plus, Edit, Eye, Users, X } from "lucide-react";
-import { toast } from "sonner";
+import { Edit, Eye, Users, X } from "lucide-react";
 
 export function Dashboard() {
   const { user } = useAuth();
@@ -29,28 +28,30 @@ export function Dashboard() {
     if (!selectedEmployeeId) {
       return projects;
     }
-    
+
     // Filter projects where the selected employee is either PM or team member
-    return projects.filter(project => 
-      project.AssignedPmId === selectedEmployeeId || 
-      project.Members?.some(m => m.EmployeeId === selectedEmployeeId)
+    return projects.filter(
+      (project) =>
+        project.AssignedPmId === selectedEmployeeId ||
+        project.Members?.some((m) => m.EmployeeId === selectedEmployeeId),
     );
   }, [projects, selectedEmployeeId]);
 
   const selectedEmployee = useMemo(() => {
-    return selectedEmployeeId ? employees.find(e => e.Id === selectedEmployeeId) : null;
+    return selectedEmployeeId
+      ? employees.find((e) => e.Id === selectedEmployeeId)
+      : null;
   }, [selectedEmployeeId, employees]);
 
   const stats = useMemo(() => {
     return {
       total: projects.length,
-      unassigned: projects.filter(p => p.Status === "Unassigned").length,
-      scheduled: projects.filter(p => p.Status === "Scheduled").length,
-      inProgress: projects.filter(p => p.Status === "InProgress").length,
-      completed: projects.filter(p => p.Status === "Complete").length,
+      unassigned: projects.filter((p) => p.Status === "Unassigned").length,
+      scheduled: projects.filter((p) => p.Status === "Scheduled").length,
+      inProgress: projects.filter((p) => p.Status === "InProgress").length,
+      completed: projects.filter((p) => p.Status === "Complete").length,
     };
   }, [projects]);
-
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -61,7 +62,11 @@ export function Dashboard() {
       case "Complete":
         return <Badge className="bg-emerald-500">Completed</Badge>;
       case "Unassigned":
-        return <Badge variant="secondary" className="bg-zinc-300">Unassigned</Badge>;
+        return (
+          <Badge variant="secondary" className="bg-zinc-300">
+            Unassigned
+          </Badge>
+        );
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -98,7 +103,9 @@ export function Dashboard() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">Total Projects</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-500">
+              Total Projects
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">{stats.total}</div>
@@ -106,34 +113,50 @@ export function Dashboard() {
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">Unassigned</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-500">
+              Unassigned
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-gray-600">{stats.unassigned}</div>
+            <div className="text-3xl font-bold text-gray-600">
+              {stats.unassigned}
+            </div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">Scheduled</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-500">
+              Scheduled
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-slate-500">{stats.scheduled}</div>
+            <div className="text-3xl font-bold text-slate-500">
+              {stats.scheduled}
+            </div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">In Progress</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-500">
+              In Progress
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-blue-600">{stats.inProgress}</div>
+            <div className="text-3xl font-bold text-blue-600">
+              {stats.inProgress}
+            </div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">Completed</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-500">
+              Completed
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-emerald-600">{stats.completed}</div>
+            <div className="text-3xl font-bold text-emerald-600">
+              {stats.completed}
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -146,7 +169,9 @@ export function Dashboard() {
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div className="flex items-center gap-3">
               <CardTitle>
-                {selectedEmployee ? `Projects - ${selectedEmployee.FullName}` : "All Projects"}
+                {selectedEmployee
+                  ? `Projects - ${selectedEmployee.FullName}`
+                  : "All Projects"}
               </CardTitle>
               {selectedEmployee && (
                 <Button
@@ -186,22 +211,33 @@ export function Dashboard() {
               <TableBody>
                 {filteredProjects.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={10} className="text-center py-8 text-gray-500">
+                    <TableCell
+                      colSpan={10}
+                      className="text-center py-8 text-gray-500"
+                    >
                       No projects found
                     </TableCell>
                   </TableRow>
                 ) : (
                   filteredProjects.map((project) => (
                     <TableRow key={project.Id}>
-                      <TableCell className="font-medium">{project.Name}</TableCell>
+                      <TableCell className="font-medium">
+                        {project.Name}
+                      </TableCell>
                       <TableCell>{project.ClientName}</TableCell>
                       <TableCell>{getStatusBadge(project.Status)}</TableCell>
-                      <TableCell>{getPriorityBadge(project.Priority)}</TableCell>
                       <TableCell>
-                        {formatDate(project.ActualStartDate || project.ExpectedStartDate)}
+                        {getPriorityBadge(project.Priority)}
                       </TableCell>
                       <TableCell>
-                        {formatDate(project.EndDate || project.EstimatedEndDate)}
+                        {formatDate(
+                          project.ActualStartDate || project.ExpectedStartDate,
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {formatDate(
+                          project.EndDate || project.EstimatedEndDate,
+                        )}
                       </TableCell>
                       <TableCell>{project.DurationWeeks}w</TableCell>
                       <TableCell>
@@ -209,7 +245,10 @@ export function Dashboard() {
                           <Users className="h-4 w-4 text-gray-400" />
                           <span>
                             {project.Members?.length || 0}/
-                            {(project.RoleCompositions || []).reduce((sum, t) => sum + t.Quantity, 0)}
+                            {(project.RoleCompositions || []).reduce(
+                              (sum, t) => sum + t.Quantity,
+                              0,
+                            )}
                           </span>
                         </div>
                       </TableCell>
@@ -221,7 +260,11 @@ export function Dashboard() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => navigate(`/app/projects/${project.Id}`, { state: { from: '/app/dashboard' } })}
+                            onClick={() =>
+                              navigate(`/app/projects/${project.Id}`, {
+                                state: { from: "/app/dashboard" },
+                              })
+                            }
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
@@ -229,7 +272,11 @@ export function Dashboard() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={() => navigate(`/app/projects/${project.Id}/edit`, { state: { from: '/app/dashboard' } })}
+                              onClick={() =>
+                                navigate(`/app/projects/${project.Id}/edit`, {
+                                  state: { from: "/app/dashboard" },
+                                })
+                              }
                             >
                               <Edit className="h-4 w-4" />
                             </Button>
