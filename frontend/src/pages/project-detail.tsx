@@ -107,11 +107,6 @@ export function ProjectDetail() {
       .slice(0, 2);
   };
 
-  const getEmployeeDetails = (employeeId: string) => {
-    return employees.find((e) => e.Id === employeeId);
-  };
-
-
   // Check if current user is the PM of this project
   const isPM = user?.role === "PM";
 

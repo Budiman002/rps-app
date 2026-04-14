@@ -128,7 +128,7 @@ export function AddProject() {
            RoleTitle: r.role,
            SeniorityLevel: r.seniority,
            Quantity: r.count,
-           EmploymentStatus: r.allocationType
+           EmploymentStatus: (r.allocationType.charAt(0).toUpperCase() + r.allocationType.slice(1)) as "Dedicated" | "Parallel"
         }))
       });
 
@@ -136,7 +136,7 @@ export function AddProject() {
         description: "GM has been notified to assign team members",
       });
       navigate("/app/projects");
-    } catch (error) {
+    } catch {
       toast.error("Failed to create project");
     } finally {
       setLoading(false);
