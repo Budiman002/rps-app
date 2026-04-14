@@ -53,11 +53,7 @@ public class CreateProjectRequestHandler : IRequestHandler<CreateProjectRequest,
         _context.Projects.Add(project);
         await _context.SaveChangesAsync(cancellationToken);
 
-        var savedProject = await _context.Projects
-            .Include(x => x.RoleCompositions)
-            .FirstAsync(x => x.Id == project.Id, cancellationToken);
-
-        return MapProjectResponse(savedProject);
+        return MapProjectResponse(project);
     }
 
     private static TEnum ParseEnum<TEnum>(string value, string fieldName) where TEnum : struct
