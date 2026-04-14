@@ -18,18 +18,20 @@ public class LoginRequestHandler : IRequestHandler<LoginRequest, AuthResponse>
 
     public async Task<AuthResponse> Handle(LoginRequest request, CancellationToken cancellationToken)
     {
+        var normalizedEmail = request.Email.Trim().ToLowerInvariant();
+
         var user = await _context.Users
-            .FirstOrDefaultAsync(x => x.Email == request.Email, cancellationToken);
+            .FirstOrDefaultAsync(x => x.Email.ToLower() == normalizedEmail, cancellationToken);
 
         if (user is null)
         {
-            throw new Exception("Email tidak ditemukan");
+            throw new UnauthorizedAccessException("Email atau password salah");
         }
 
         var passwordValid = BCrypt.Net.BCrypt.Verify(request.Password, user.Password);
         if (!passwordValid)
         {
-            throw new Exception("Password salah");
+            throw new UnauthorizedAccessException("Email atau password salah");
         }
 
         var token = JwtHelper.GenerateToken(user);

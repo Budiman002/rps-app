@@ -11,6 +11,7 @@ using Microsoft.OpenApi;
 using RPS.Commons.Extensions;
 using RPS.Commons.RequestHandlers.Auth;
 using RPS.Entities;
+using RPS.WebAPI.Converters;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -22,6 +23,7 @@ builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
         options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+        options.JsonSerializerOptions.Converters.Add(new UtcDateTimeConverter());
         options.JsonSerializerOptions.PropertyNamingPolicy = null;
     });
 builder.Services.AddEndpointsApiExplorer();
@@ -96,7 +98,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-// Global exception handler: ValidationException → 400, KeyNotFoundException → 404, else 500
+// Global exception handler: ValidationException → 400, UnauthorizedAccessException → 401, KeyNotFoundException → 404, else 500
 app.UseExceptionHandler(exceptionHandler =>
 {
     exceptionHandler.Run(async context =>
@@ -117,6 +119,17 @@ app.UseExceptionHandler(exceptionHandler =>
                     e.PropertyName,
                     e.ErrorMessage
                 })
+            });
+        }
+        else if (error is UnauthorizedAccessException unauthorizedEx)
+        {
+            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsJsonAsync(new
+            {
+                status = 401,
+                title = "Unauthorized",
+                detail = unauthorizedEx.Message
             });
         }
         else if (error is KeyNotFoundException notFoundEx)

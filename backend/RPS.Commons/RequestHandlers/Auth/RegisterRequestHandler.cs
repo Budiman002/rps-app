@@ -20,8 +20,10 @@ public class RegisterRequestHandler : IRequestHandler<RegisterRequest, AuthRespo
 
     public async Task<AuthResponse> Handle(RegisterRequest request, CancellationToken cancellationToken)
     {
+        var normalizedEmail = request.Email.Trim().ToLowerInvariant();
+
         var existingUser = await _context.Users
-            .AnyAsync(x => x.Email == request.Email, cancellationToken);
+            .AnyAsync(x => x.Email.ToLower() == normalizedEmail, cancellationToken);
 
         if (existingUser)
         {
@@ -40,7 +42,7 @@ public class RegisterRequestHandler : IRequestHandler<RegisterRequest, AuthRespo
         var user = new User
         {
             FullName = request.FullName,
-            Email = request.Email,
+            Email = normalizedEmail,
             Password = BCrypt.Net.BCrypt.HashPassword(request.Password),
             Role = role,
             ContractType = ContractType.Permanent,
