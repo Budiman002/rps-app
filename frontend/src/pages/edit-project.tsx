@@ -11,7 +11,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { ArrowLeft, Plus, Trash2, Info } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Info, Save } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 export function EditProject() {
   const { id } = useParams();
@@ -43,6 +49,7 @@ export function EditProject() {
   const [teamMembers, setTeamMembers] = useState<ProjectMember[]>([]);
 
   const [loading, setLoading] = useState(false);
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
 
   useEffect(() => {
     if (project) {
@@ -225,10 +232,8 @@ export function EditProject() {
     });
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-
-    const ZERO_GUID = "00000000-0000-0000-0000-000000000000";
 
     // "Only allow all field filled or nothing. Not half filled."
     const invalidRoles = roles.filter(r => !r.roleTitle || r.quantity < 1);
@@ -240,13 +245,18 @@ export function EditProject() {
     const invalidMembers = teamMembers.filter(m => 
         !m.EmployeeId || 
         !m.RoleCompositionId || 
-        m.RoleCompositionId === ZERO_GUID
+        m.RoleCompositionId === "00000000-0000-0000-0000-000000000000"
     );
     if (invalidMembers.length > 0) {
       toast.error("Please complete all team member assignments. Each member must match a budget role.");
       return;
     }
 
+    setIsConfirmModalOpen(true);
+  };
+
+  const handleConfirmUpdate = async () => {
+    setIsConfirmModalOpen(false);
     setLoading(true);
     try {
         const payload: UpdateProjectRequest = {
@@ -627,6 +637,45 @@ export function EditProject() {
           </Button>
         </div>
       </form>
+
+      <Dialog open={isConfirmModalOpen} onOpenChange={setIsConfirmModalOpen}>
+        <DialogContent className="sm:max-w-[400px] p-8 rounded-[32px] border-none shadow-xl">
+          <div className="flex flex-col items-center text-center space-y-6">
+            {/* Icon decoration */}
+            <div className="relative">
+              <div className="w-20 h-20 rounded-full bg-orange-50 flex items-center justify-center">
+                <div className="w-14 h-14 rounded-full bg-orange-100/50 flex items-center justify-center">
+                   <Save className="h-8 w-8 text-orange-600" />
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <DialogTitle className="text-2xl font-bold text-slate-900">Update Project</DialogTitle>
+              <DialogDescription className="text-base text-slate-500 font-medium">
+                Do you want to update project?
+              </DialogDescription>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 w-full pt-4">
+              <Button
+                variant="outline"
+                className="h-12 rounded-xl border-slate-200 text-slate-600 font-semibold text-base hover:bg-slate-50"
+                onClick={() => setIsConfirmModalOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="h-12 rounded-xl bg-blue-500 hover:bg-blue-600 text-white font-semibold text-base shadow-lg shadow-blue-200"
+                onClick={handleConfirmUpdate}
+                disabled={loading}
+              >
+                Confirm
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
