@@ -25,6 +25,7 @@ export function RequestChangeModal({ open, onOpenChange, project, employees, onS
   const [includeTimeline, setIncludeTimeline] = useState(false);
   const [includeRoles, setIncludeRoles] = useState(false);
   const [includeEmployees, setIncludeEmployees] = useState(false);
+  const maxTitleLength = 150;
 
   const getToday = () => {
     const d = new Date();
@@ -155,6 +156,11 @@ export function RequestChangeModal({ open, onOpenChange, project, employees, onS
   const handleSubmit = () => {
     if (!title.trim()) {
       toast.error("Please provide a title for the change request");
+      return;
+    }
+
+    if (title.trim().length > maxTitleLength) {
+      toast.error(`Change Title can only contain up to ${maxTitleLength} characters.`);
       return;
     }
 
@@ -356,8 +362,14 @@ export function RequestChangeModal({ open, onOpenChange, project, employees, onS
               id="title"
               placeholder="e.g., Extend project timeline by 2 weeks"
               value={title}
+              maxLength={maxTitleLength}
               onChange={(e) => setTitle(e.target.value)}
+              className="w-full break-all overflow-wrap overflow-x-hidden"
+              style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
             />
+            <p className="text-xs text-gray-500">
+              {title.length}/{maxTitleLength} characters
+            </p>
           </div>
 
           <div className="space-y-2">
@@ -368,6 +380,8 @@ export function RequestChangeModal({ open, onOpenChange, project, employees, onS
               rows={3}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
+              className="w-full break-all overflow-wrap overflow-x-hidden"
+              style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
             />
           </div>
 

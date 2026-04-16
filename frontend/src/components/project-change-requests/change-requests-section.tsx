@@ -164,9 +164,14 @@ export function ChangeRequestsSection({
             <div key={request.Id} className="border-2 border-slate-200 rounded-lg p-5 space-y-4 shadow-sm bg-white mb-4 last:mb-0">
             <div className="space-y-3">
               <div className="flex items-start justify-between">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <h4 className="font-medium">{request.ChangeTitle}</h4>
+                <div className="space-y-1 w-full">
+                  <div className="flex items-start gap-2 flex-wrap">
+                    <h4 
+                      className="font-medium break-all min-w-0"
+                      style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
+                    >
+                      {request.ChangeTitle}
+                    </h4>
                     {getTypeBadge(request)}
                     {getStatusBadge(request.Status)}
                   </div>
@@ -198,7 +203,12 @@ export function ChangeRequestsSection({
                 )}
               </div>
 
-              <p className="text-sm">{request.ChangeDescription}</p>
+              <p 
+                className="text-sm break-all min-w-0"
+                style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
+              >
+                {request.ChangeDescription}
+              </p>
 
               {/* Timeline Changes */}
               {request.NewStartDate && (
