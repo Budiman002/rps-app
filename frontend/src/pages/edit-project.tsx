@@ -18,6 +18,7 @@ import {
   DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { cn } from "@/components/ui/utils";
 
 export function EditProject() {
   const { id } = useParams();
@@ -47,6 +48,7 @@ export function EditProject() {
 
   // Team members state
   const [teamMembers, setTeamMembers] = useState<ProjectMember[]>([]);
+  const [showValidation, setShowValidation] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
@@ -238,6 +240,7 @@ export function EditProject() {
     // "Only allow all field filled or nothing. Not half filled."
     const invalidRoles = roles.filter(r => !r.roleTitle || r.quantity < 1);
     if (invalidRoles.length > 0) {
+      setShowValidation(true);
       toast.error("Please complete all role fields or remove the incomplete role");
       return;
     }
@@ -248,10 +251,12 @@ export function EditProject() {
         m.RoleCompositionId === "00000000-0000-0000-0000-000000000000"
     );
     if (invalidMembers.length > 0) {
+      setShowValidation(true);
       toast.error("Please complete all team member assignments. Each member must match a budget role.");
       return;
     }
 
+    setShowValidation(false);
     setIsConfirmModalOpen(true);
   };
 
@@ -428,7 +433,7 @@ export function EditProject() {
                               value={role.roleTitle}
                               onValueChange={(value) => handleRoleChange(index, "roleTitle", value)}
                             >
-                              <SelectTrigger>
+                              <SelectTrigger className={cn(showValidation && !role.roleTitle && "border-red-500")}>
                                 <SelectValue placeholder="Select role..." />
                               </SelectTrigger>
                               <SelectContent>
@@ -571,7 +576,10 @@ export function EditProject() {
                                   }
                                 }}
                               >
-                                <SelectTrigger className="bg-gray-50/50">
+                                <SelectTrigger className={cn(
+                                    "bg-gray-50/50",
+                                    showValidation && !member.EmployeeId && "border-red-500"
+                                )}>
                                   <SelectValue placeholder="Select employee..." />
                                 </SelectTrigger>
                                 <SelectContent>
