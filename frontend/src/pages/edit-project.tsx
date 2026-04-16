@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { formatDate } from "@/functions/dateFormatter";
+import { formatDate, formatForInput } from "@/functions/dateFormatter";
 import { useParams, useNavigate, useLocation } from "react-router";
 import { useAuth } from "@/contexts/auth-context";
 import { useData, Project, ProjectMember, Seniority, UpdateProjectRequest } from "@/contexts/data-context";
@@ -11,7 +11,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { ArrowLeft, Plus, Trash2, Info } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Info, Save } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { cn } from "@/components/ui/utils";
 
 export function EditProject() {
   const { id } = useParams();
@@ -41,14 +48,24 @@ export function EditProject() {
 
   // Team members state
   const [teamMembers, setTeamMembers] = useState<ProjectMember[]>([]);
+  const [showValidation, setShowValidation] = useState(false);
 
   const [loading, setLoading] = useState(false);
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
 
   useEffect(() => {
     if (project) {
-      setStartDate(project.ActualStartDate || project.ExpectedStartDate || "");
+      // Ensure dates are formatted for <input type="date"> (YYYY-MM-DD)
+      let initialStart = formatForInput(project.ActualStartDate || project.ExpectedStartDate);
+      
+      // If InProgress and no date found, default to today so the form is valid (as requested)
+      if (!initialStart && project.Status === "InProgress") {
+        initialStart = new Date().toISOString().split("T")[0] ?? "";
+      }
+      
+      setStartDate(initialStart);
       setDuration(String(project.DurationWeeks || 0));
-      setEndDate(project.EndDate || project.EstimatedEndDate || "");
+      setEndDate(formatForInput(project.EndDate || project.EstimatedEndDate));
       
       const ZERO_GUID = "00000000-0000-0000-0000-000000000000";
 
@@ -225,14 +242,13 @@ export function EditProject() {
     });
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-
-    const ZERO_GUID = "00000000-0000-0000-0000-000000000000";
 
     // "Only allow all field filled or nothing. Not half filled."
     const invalidRoles = roles.filter(r => !r.roleTitle || r.quantity < 1);
     if (invalidRoles.length > 0) {
+      setShowValidation(true);
       toast.error("Please complete all role fields or remove the incomplete role");
       return;
     }
@@ -240,13 +256,20 @@ export function EditProject() {
     const invalidMembers = teamMembers.filter(m => 
         !m.EmployeeId || 
         !m.RoleCompositionId || 
-        m.RoleCompositionId === ZERO_GUID
+        m.RoleCompositionId === "00000000-0000-0000-0000-000000000000"
     );
     if (invalidMembers.length > 0) {
+      setShowValidation(true);
       toast.error("Please complete all team member assignments. Each member must match a budget role.");
       return;
     }
 
+    setShowValidation(false);
+    setIsConfirmModalOpen(true);
+  };
+
+  const handleConfirmUpdate = async () => {
+    setIsConfirmModalOpen(false);
     setLoading(true);
     try {
         const payload: UpdateProjectRequest = {
@@ -418,7 +441,7 @@ export function EditProject() {
                               value={role.roleTitle}
                               onValueChange={(value) => handleRoleChange(index, "roleTitle", value)}
                             >
-                              <SelectTrigger>
+                              <SelectTrigger className={cn(showValidation && !role.roleTitle && "border-red-500")}>
                                 <SelectValue placeholder="Select role..." />
                               </SelectTrigger>
                               <SelectContent>
@@ -561,7 +584,10 @@ export function EditProject() {
                                   }
                                 }}
                               >
-                                <SelectTrigger className="bg-gray-50/50">
+                                <SelectTrigger className={cn(
+                                    "bg-gray-50/50",
+                                    showValidation && !member.EmployeeId && "border-red-500"
+                                )}>
                                   <SelectValue placeholder="Select employee..." />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -627,6 +653,45 @@ export function EditProject() {
           </Button>
         </div>
       </form>
+
+      <Dialog open={isConfirmModalOpen} onOpenChange={setIsConfirmModalOpen}>
+        <DialogContent className="sm:max-w-[400px] p-8 rounded-[32px] border-none shadow-xl">
+          <div className="flex flex-col items-center text-center space-y-6">
+            {/* Icon decoration */}
+            <div className="relative">
+              <div className="w-20 h-20 rounded-full bg-orange-50 flex items-center justify-center">
+                <div className="w-14 h-14 rounded-full bg-orange-100/50 flex items-center justify-center">
+                   <Save className="h-8 w-8 text-orange-600" />
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <DialogTitle className="text-2xl font-bold text-slate-900">Update Project</DialogTitle>
+              <DialogDescription className="text-base text-slate-500 font-medium">
+                Do you want to update project?
+              </DialogDescription>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 w-full pt-4">
+              <Button
+                variant="outline"
+                className="h-12 rounded-xl border-slate-200 text-slate-600 font-semibold text-base hover:bg-slate-50"
+                onClick={() => setIsConfirmModalOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="h-12 rounded-xl bg-blue-500 hover:bg-blue-600 text-white font-semibold text-base shadow-lg shadow-blue-200"
+                onClick={handleConfirmUpdate}
+                disabled={loading}
+              >
+                Confirm
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

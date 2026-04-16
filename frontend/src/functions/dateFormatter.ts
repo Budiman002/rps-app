@@ -43,3 +43,14 @@ export const formatDateTime = (
   });
   return `${date} ${time}`;
 };
+
+/**
+ * Formats a date string to YYYY-MM-DD for use in <input type="date">.
+ * Returns empty string for invalid inputs.
+ */
+export const formatForInput = (dateStr: string | null | undefined): string => {
+  if (!dateStr) return "";
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return "";
+  return d.toISOString().split("T")[0] ?? "";
+};
