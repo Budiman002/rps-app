@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { formatDate } from "@/functions/dateFormatter";
+import { formatDate, formatForInput } from "@/functions/dateFormatter";
 import { useParams, useNavigate, useLocation } from "react-router";
 import { useAuth } from "@/contexts/auth-context";
 import { useData, Project, ProjectMember, Seniority, UpdateProjectRequest } from "@/contexts/data-context";
@@ -55,9 +55,17 @@ export function EditProject() {
 
   useEffect(() => {
     if (project) {
-      setStartDate(project.ActualStartDate || project.ExpectedStartDate || "");
+      // Ensure dates are formatted for <input type="date"> (YYYY-MM-DD)
+      let initialStart = formatForInput(project.ActualStartDate || project.ExpectedStartDate);
+      
+      // If InProgress and no date found, default to today so the form is valid (as requested)
+      if (!initialStart && project.Status === "InProgress") {
+        initialStart = new Date().toISOString().split("T")[0] ?? "";
+      }
+      
+      setStartDate(initialStart);
       setDuration(String(project.DurationWeeks || 0));
-      setEndDate(project.EndDate || project.EstimatedEndDate || "");
+      setEndDate(formatForInput(project.EndDate || project.EstimatedEndDate));
       
       const ZERO_GUID = "00000000-0000-0000-0000-000000000000";
 
