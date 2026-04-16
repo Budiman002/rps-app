@@ -40,22 +40,37 @@ export function AssignMembers() {
     );
   }, [project]);
 
-  // Filter available employees for each role based on start date and contract
+  // Filter available employees for each role based on start date
   const getAvailableEmployees = (roleTitle: string, seniorityLevel: string, startDate?: string) => {
     const projectStartDate = startDate ? new Date(startDate) : new Date();
-    const duration = project?.DurationWeeks || 0;
-    const projectEndDate = new Date(projectStartDate);
-    projectEndDate.setDate(projectEndDate.getDate() + duration * 7);
+    projectStartDate.setUTCHours(0, 0, 0, 0);
 
     return employees
       .filter((emp) => {
         if (emp.JobTitle !== roleTitle || emp.SeniorityLevel !== seniorityLevel) return false;
-        if (emp.IsUnavailable) return false;
         
-        // Availability: If contract, check if it ends after the project estimated end date
-        if (emp.ContractType === "Contract" && emp.ContractEndDate) {
-          const contractEnd = new Date(emp.ContractEndDate);
-          if (contractEnd < projectEndDate) return false;
+        // Check if employee is unavailable due to current projects
+        if (emp.IsUnavailable) {
+          let maxEndDate = new Date(0);
+          if (emp.CurrentProjects && emp.CurrentProjects.length > 0) {
+            emp.CurrentProjects.forEach(projName => {
+              const p = projects.find(proj => proj.Name === projName);
+              if (p) {
+                const pEnd = new Date(p.EstimatedEndDate || p.EndDate || p.ExpectedStartDate || new Date());
+                if (pEnd > maxEndDate) maxEndDate = pEnd;
+              }
+            });
+          }
+          
+          if (maxEndDate.getTime() > 0) {
+            const nextDay = new Date(maxEndDate);
+            nextDay.setUTCDate(nextDay.getUTCDate() + 1);
+            nextDay.setUTCHours(0, 0, 0, 0);
+            
+            if (nextDay > projectStartDate) return false;
+          } else {
+            return false; // Unavailable for other reasons
+          }
         }
         
         return true;
@@ -74,6 +89,12 @@ export function AssignMembers() {
 
   // Check resource availability and calculate recommended start date
   const resourceAvailability = useMemo(() => {
+    const baseStartDateStr = actualStartDate || project?.ExpectedStartDate;
+    const baseStartDate = new Date(baseStartDateStr || new Date());
+    baseStartDate.setUTCHours(0, 0, 0, 0);
+
+    let globalRecommendedStartDate = new Date(baseStartDate);
+
     const unavailableRoles: Array<{
       roleTitle: string;
       seniorityLevel: string;
@@ -81,36 +102,90 @@ export function AssignMembers() {
       dedicatedEmployees: string[];
     }> = [];
 
-    roleRequirements.forEach((req) => {
-      const available = getAvailableEmployees(req.roleTitle, req.seniorityLevel);
-      if (available.length === 0) {
-        const dedicated = employees.filter(
-          (emp) =>
-            emp.JobTitle === req.roleTitle &&
-            emp.SeniorityLevel === req.seniorityLevel
-        );
-
-        // For now, let's assume they are available from today if none found
-        unavailableRoles.push({
-          roleTitle: req.roleTitle,
-          seniorityLevel: req.seniorityLevel,
-          availableDate: new Date().toISOString().split("T")[0]!,
-          dedicatedEmployees: dedicated.map((e) => e.FullName),
-        });
-      }
+    // Group role requirements by title + seniority
+    const roleCounts: Record<string, number> = {};
+    roleRequirements.forEach(req => {
+      const key = `${req.roleTitle}|${req.seniorityLevel}`;
+      roleCounts[key] = (roleCounts[key] || 0) + 1;
     });
 
-    let recommendedStartDate: string = "";
-    if (unavailableRoles.length > 0) {
-      recommendedStartDate = new Date().toISOString().split("T")[0]!;
-    }
+    Object.entries(roleCounts).forEach(([key, quantityNeeded]) => {
+      const [roleTitle, seniorityLevel] = key.split('|');
+
+      const matchingEmployees = employees.filter(
+        emp => emp.JobTitle === roleTitle && emp.SeniorityLevel === seniorityLevel
+      );
+
+      // Map each matching employee to their available date
+      const employeeAvailability = matchingEmployees.map(emp => {
+        let availableDate = new Date(baseStartDate);
+        
+        if (emp.IsUnavailable) {
+          if (emp.CurrentProjects && emp.CurrentProjects.length > 0) {
+            let maxEndDate = new Date(0);
+            emp.CurrentProjects.forEach(projName => {
+              const p = projects.find(proj => proj.Name === projName);
+              if (p) {
+                const pEnd = new Date(p.EstimatedEndDate || p.EndDate || p.ExpectedStartDate || new Date());
+                if (pEnd > maxEndDate) maxEndDate = pEnd;
+              }
+            });
+            
+            if (maxEndDate.getTime() > 0) {
+              const nextDay = new Date(maxEndDate);
+              nextDay.setUTCDate(nextDay.getUTCDate() + 1);
+              nextDay.setUTCHours(0, 0, 0, 0);
+              if (nextDay > availableDate) {
+                availableDate = nextDay;
+              }
+            }
+          }
+        }
+        return { emp, availableDate };
+      });
+
+      // Sort by available date (earliest first)
+      employeeAvailability.sort((a, b) => a.availableDate.getTime() - b.availableDate.getTime());
+
+      if (employeeAvailability.length < quantityNeeded) {
+        // Not enough employees exist for this role at all
+        unavailableRoles.push({
+          roleTitle: roleTitle!,
+          seniorityLevel: seniorityLevel!,
+          availableDate: globalRecommendedStartDate.toISOString().split("T")[0]!,
+          dedicatedEmployees: []
+        });
+      } else {
+        // The earliest we can get `quantityNeeded` employees is the available date of the Q-th employee.
+        const fulfillmentDate = employeeAvailability[quantityNeeded - 1]!.availableDate;
+
+        if (fulfillmentDate > globalRecommendedStartDate) {
+          globalRecommendedStartDate = fulfillmentDate;
+          
+          unavailableRoles.push({
+            roleTitle: roleTitle!,
+            seniorityLevel: seniorityLevel!,
+            availableDate: fulfillmentDate.toISOString().split("T")[0]!,
+            dedicatedEmployees: employeeAvailability.slice(0, quantityNeeded).map(e => e.emp.FullName)
+          });
+        } else if (fulfillmentDate > baseStartDate) {
+            // It's not greater than global recommended, but it is delayed for this specific role compared to expected
+            unavailableRoles.push({
+              roleTitle: roleTitle!,
+              seniorityLevel: seniorityLevel!,
+              availableDate: fulfillmentDate.toISOString().split("T")[0]!,
+              dedicatedEmployees: employeeAvailability.slice(0, quantityNeeded).map(e => e.emp.FullName)
+            });
+        }
+      }
+    });
 
     return {
       hasUnavailableResources: unavailableRoles.length > 0,
       unavailableRoles,
-      recommendedStartDate,
+      recommendedStartDate: globalRecommendedStartDate.toISOString().split("T")[0]!,
     };
-  }, [roleRequirements, employees]);
+  }, [roleRequirements, employees, projects, project]);
 
   useEffect(() => {
     if (project && !actualStartDate) {
@@ -329,7 +404,7 @@ export function AssignMembers() {
             </div>
 
             {/* Resource Availability Warning */}
-            {resourceAvailability.hasUnavailableResources && (
+            {resourceAvailability.hasUnavailableResources && actualStartDate !== resourceAvailability.recommendedStartDate && (
               <Alert variant="destructive">
                 <AlertTriangle className="h-4 w-4" />
                 <AlertTitle>Resources Not Available</AlertTitle>
