@@ -133,6 +133,14 @@ export function AddProject() {
       return;
     }
 
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const selectedDate = new Date(formData.expectedStartDate);
+    if (selectedDate < today) {
+      toast.error("Start date cannot be in the past");
+      return;
+    }
+
     const hasEmptyRoles = teamRoles.some((role) => !role.role);
     if (hasEmptyRoles) {
       toast.error("Please specify all team roles");
