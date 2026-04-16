@@ -13,7 +13,10 @@ import { toast } from "sonner";
 const signUpSchema = z.object({
   name: z.string().min(1, "Full name is required").max(120, "Name is too long"),
   email: z.string().min(1, "Email is required").email("Please enter a valid email"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
+  password: z.string()
+    .min(6, "Password must be at least 6 characters")
+    .regex(/[a-zA-Z]/, "Password doesn't meet the requirements")
+    .regex(/[0-9]/, "Password doesn't meet the requirements"),
   confirmPassword: z.string().min(1, "Confirm password is required"),
   role: z.enum(["Marketing", "GM", "PM", "HR"]),
 }).refine((data) => data.password === data.confirmPassword, {
@@ -58,8 +61,7 @@ export function SignUp() {
         errorMessage.toLowerCase().includes("already registered");
 
       if (isDuplicateEmail) {
-        toast.info("Account already exists. Redirecting to login...");
-        navigate("/login");
+        toast.error("This email is already registered");
       } else {
         toast.error(errorMessage || "Sign up failed");
       }
