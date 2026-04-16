@@ -43,7 +43,7 @@ export function Login() {
         navigate("/app");
       }, 100);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Login failed");
+      toast.error("Incorrect password");
     }
   };
 
