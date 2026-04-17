@@ -43,12 +43,19 @@ public class UpdateContractExtendRequestStatusHandler : IRequestHandler<UpdateCo
             });
         }
 
+        var previousContractEndDate = extensionRequest.Employee.ContractEndDate;
+
         extensionRequest.Status = newStatus;
         extensionRequest.UpdatedAt = DateTime.UtcNow;
 
         if (newStatus == RequestStatus.Approved)
         {
             extensionRequest.Employee.ContractEndDate = extensionRequest.RequestedEndDate;
+            extensionRequest.Employee.UpdatedAt = DateTime.UtcNow;
+        }
+        else if (newStatus == RequestStatus.Rejected)
+        {
+            extensionRequest.Employee.ContractEndDate = previousContractEndDate;
             extensionRequest.Employee.UpdatedAt = DateTime.UtcNow;
         }
 
